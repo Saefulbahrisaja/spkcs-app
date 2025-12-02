@@ -11,13 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('pemeringkatan_vikors', function (Blueprint $table) {
             $table->id();
-            $table->string('nama');
-            $table->string('email')->unique();
-            $table->string('username')->unique();
-            $table->string('password');
-            $table->enum('role', ['admin','dinas','penyuluh']);
+            $table->foreignId('alternatif_id')->constrained('alternatif_lahans')->onDelete('cascade');
+            $table->float('v_value')->nullable();
+            $table->float('q_value')->nullable();
+            $table->integer('hasil_ranking')->nullable();
             $table->timestamps();
         });
     }
@@ -27,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
+        Schema::dropIfExists('pemeringkatan_vikors');
     }
 };
