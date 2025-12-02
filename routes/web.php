@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\WilayahController;
 use App\Http\Controllers\Admin\KlasifikasiController;
 use App\Http\Controllers\Admin\VIKORController;
 use App\Http\Controllers\Admin\LaporanController;
+use App\Http\Controllers\Admin\BatasController;
 use App\Http\Controllers\AlternatifController;
 
 use Illuminate\Support\Facades\Artisan;
@@ -47,7 +48,6 @@ Route::middleware(['auth', 'role:admin'])
     // AHP HITUNG
     Route::get('ahp/hitung', [AHPController::class, 'hitungBobot'])->name('ahp.hitung');
 
-
     // ALTERNATIF
    
     Route::get('/alternatif/nilai', [AlternatifController::class, 'formNilai'])->name('alternatif.index');
@@ -68,8 +68,18 @@ Route::middleware(['auth', 'role:admin'])
     Route::get('vikor/hitung', [VIKORController::class, 'proses'])->name('vikor.hitung');
     Route::get('vikor/hasil', [VIKORController::class, 'hasil'])->name('vikor.hasil');
     Route::post('vikor/proses', [VIKORController::class, 'proses'])->name('vikor.proses');
+    Route::get('/batas', [BatasController::class, 'index'])->name('batas.index');
+    Route::post('/batas', [BatasController::class, 'update'])->name('batas.update');
 
     // LAPORAN
+    
+Route::get('/ringkasanluas', [GISController::class, 'ringkasanLuas'])
+     ->name('ringkasan.luas');
+
+    Route::get('/ringkasan-chart', function () {
+        return view('gis.ringkasan-chart');
+    })->name('ringkasan.chart');
+
     Route::resource('laporan', LaporanController::class);
 
     Route::post('/evaluation/run', [\App\Http\Controllers\EvaluationController::class, 'run'])
@@ -113,6 +123,7 @@ Route::get('/map/geojson', [GISController::class, 'geojson'])->name('map.geojson
 Route::get('/peta', function() {
     return view('gis.index');
 });
+
 
 Route::get('/', function () {
     return view('welcome');

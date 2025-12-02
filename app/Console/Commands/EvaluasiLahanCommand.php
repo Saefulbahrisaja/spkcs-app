@@ -117,13 +117,18 @@ class EvaluasiLahanCommand extends Command
     private function hitungKlasifikasi()
     {
         $alternatifs = AlternatifLahan::all();
+        $batas = \App\Models\BatasKesesuaian::first();
+
+        $S1 = $batas->batas_s1;
+        $S2 = $batas->batas_s2;
+        $S3 = $batas->batas_s3;
 
         foreach ($alternatifs as $a) {
             $skor = $a->nilai_total;
 
-            if ($skor >= 0.8) $kelas = 'S1';
-            elseif ($skor >= 0.6) $kelas = 'S2';
-            elseif ($skor >= 0.4) $kelas = 'S3';
+            if ($skor >= $S1) $kelas = 'S1';
+            elseif ($skor >= $S2) $kelas = 'S2';
+            elseif ($skor >= $S3) $kelas = 'S3';
             else $kelas = 'N';
 
             KlasifikasiLahan::updateOrCreate(

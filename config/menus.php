@@ -10,7 +10,7 @@ return [
             ['label' => 'Kelola Wilayah/Alternatif', 'route' => 'admin.wilayah.index'],
             ['label' => 'AHP Bobot', 'route' => 'admin.ahp.matrix'],
             //['label' => 'Threshold Klasifikasi', 'route' => 'admin.threshold.index'],
-            //['label' => 'Klasifikasi FAO', 'route' => 'admin.klasifikasi.hitung'],
+            ['label' => 'Setting Batas Kelas', 'route' => 'admin.batas.index'],
             
             ['label' => 'Laporan', 'route' => 'admin.laporan.index'],
             //['label' => 'Pengguna', 'route' => 'admin.users.index'],
