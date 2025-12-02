@@ -3,8 +3,7 @@
 
 <h1 class="text-xl font-bold mb-4">Hasil Ranking VIKOR</h1>
 
-<form method="POST" action="{{ route('admin.vikor.proses') }}">
-    @csrf
+<form method="GET" action="{{ route('admin.vikor.hitung') }}">
     <button class="bg-blue-600 text-white px-4 py-2 rounded mb-4">
         Proses VIKOR
     </button>

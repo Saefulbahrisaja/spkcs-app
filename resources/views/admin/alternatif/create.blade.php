@@ -5,7 +5,6 @@
 
 <form action="{{ route('admin.alternatif.store') }}" method="POST" enctype="multipart/form-data">
     @csrf
-
     <label>Nama Lokasi</label>
     <input type="text" name="lokasi" class="border p-2 w-full mb-3" required>
 

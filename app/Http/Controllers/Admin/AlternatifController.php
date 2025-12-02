@@ -23,37 +23,104 @@ class AlternatifController extends Controller
     }
 
     public function store(Request $request)
-    {
+{
+    try {
+
+        // Validasi untuk max 100 MB
         $request->validate([
             'lokasi' => 'required|string',
-            'geojson' => 'nullable|file|mimes:json,geojson|max:5000',
+
+            'geojson' => [
+                'nullable',
+                'file',
+                'max:124000', // 100 MB
+                function ($attribute, $value, $fail) {
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    if (!in_array($ext, ['json', 'geojson'])) {
+                        $fail("File harus berekstensi .json atau .geojson");
+                    }
+                }
+            ],
         ]);
 
-        $data = $request->all();
+        $data = $request->only(['lokasi']);
 
-        // Upload GeoJSON
         if ($request->hasFile('geojson')) {
+
             $file = $request->file('geojson');
-            
-            $path = $file->store('geojson', 'public'); 
+
+            \Log::info("=== [UPLOAD GEOJSON] File diterima: ".$file->getClientOriginalName()." | Size: ".$file->getSize()." bytes ===");
+
+            // simpan file
+            $path = $file->store('geojson', 'public');
             $data['geojson_path'] = $path;
 
-            // Optional: detect geometry + centroid
-            $geo = json_decode(file_get_contents($file->getRealPath()), true);
+            \Log::info("=== [UPLOAD GEOJSON] File berhasil disimpan ke storage: $path ===");
 
+            // baca file setelah disimpan
+            $fullPath = storage_path("app/public/$path");
+
+            if (!file_exists($fullPath)) {
+                \Log::error("### [ERROR] File tidak ditemukan setelah upload: $fullPath ###");
+                return back()->with('error', 'Gagal membaca file setelah upload.');
+            }
+
+            $content = @file_get_contents($fullPath);
+
+            if (!$content) {
+                \Log::error("### [ERROR] Gagal membaca isi file: $fullPath ###");
+                return back()->with('error', 'Gagal membaca isi file.');
+            }
+
+            $geo = json_decode($content, true);
+
+            if (!$geo) {
+                \Log::error("### [ERROR] JSON tidak valid pada file: $fullPath ###");
+                return back()->with('error', 'File GeoJSON tidak valid.');
+            }
+
+            // geometry type
             if (isset($geo['features'][0]['geometry']['type'])) {
                 $data['geometry_type'] = $geo['features'][0]['geometry']['type'];
             }
 
-            // Auto centroid
-            list($lat, $lng) = $this->getCentroid($geo);
+            // centroid
+            [$lat, $lng] = $this->getCentroid($geo);
             $data['lat'] = $lat;
             $data['lng'] = $lng;
+
+            \Log::info("=== [UPLOAD GEOJSON] Geometry Type: {$data['geometry_type']}, LAT: $lat, LNG: $lng ===");
         }
 
         AlternatifLahan::create($data);
-        return redirect()->route('admin.alternatif.index')->with("success", "Alternatif berhasil disimpan");
+
+        \Log::info("=== [UPLOAD GEOJSON] DATA BERHASIL DISIMPAN ===");
+
+        return redirect()
+            ->route('admin.alternatif.index')
+            ->with("success", "Alternatif berhasil disimpan");
+
+    } catch (\Throwable $e) {
+
+        // LOGGING ERROR DETAIL
+        \Log::error("### [FATAL ERROR UPLOAD GEOJSON] ###");
+        \Log::error("Message: " . $e->getMessage());
+        \Log::error("File: " . $e->getFile());
+        \Log::error("Line: " . $e->getLine());
+
+        // TAMPILKAN ERROR DI BROWSER
+        return back()->with('error', '
+            <div style="padding:20px; background:#ffdddd; border-left:5px solid red;">
+                <h2 style="color:red;">⚠️ ERROR UPLOAD GEOJSON</h2>
+                <p><strong>'.$e->getMessage().'</strong></p>
+                <small>'.$e->getFile().' Line '.$e->getLine().'</small>
+            </div>
+        ');
     }
+}
+
+
+
 
 
     public function formNilai($id)

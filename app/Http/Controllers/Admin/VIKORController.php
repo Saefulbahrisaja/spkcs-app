@@ -8,6 +8,7 @@ use App\Models\PemeringkatanVikor;
 
 class VIKORController extends Controller
 {
+    
     public function proses(VIKORService $vikor)
     {
         $vikor->calculateVikor();

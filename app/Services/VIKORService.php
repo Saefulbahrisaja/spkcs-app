@@ -17,21 +17,21 @@ class VIKORService
         $S = [];
         $R = [];
 
+        // Step 1: Hitung S dan R
         foreach ($alternatif as $alt) {
             $sumWeighted = 0;
             $maxRegret = 0;
 
             foreach ($kriteria as $k) {
+
                 $nilai = NilaiAlternatif::where('alternatif_id', $alt->id)
                     ->where('kriteria_id', $k->id)
-                    ->value('skor');
+                    ->value('skor') ?? 0;
 
-                $weighted = $nilai * $k->bobot;
+                $weighted = $nilai * ($k->bobot ?? 0);
 
-                // S_j = Σ w_i * f_ij
                 $sumWeighted += $weighted;
 
-                // R_j = max (w_i * f_ij)
                 if ($weighted > $maxRegret) {
                     $maxRegret = $weighted;
                 }
@@ -41,21 +41,28 @@ class VIKORService
             $R[$alt->id] = $maxRegret;
         }
 
-        // Normalisasi
+        // Step 2: Normalisasi
         $S_min = min($S);
         $S_max = max($S);
         $R_min = min($R);
         $R_max = max($R);
 
         $Q = [];
-        $v = 0.5; // Default VIKOR parameter
+        $v = 0.5; // Default parameter VIKOR
 
         foreach ($alternatif as $alt) {
-            $Q[$alt->id] = 
-                $v * (($S[$alt->id] - $S_min) / ($S_max - $S_min)) +
-                (1 - $v) * (($R[$alt->id] - $R_min) / ($R_max - $R_min));
 
-            // Simpan
+            // HANDLE division by zero
+            $S_ratio = ($S_max - $S_min) == 0
+                ? 0
+                : (($S[$alt->id] - $S_min) / ($S_max - $S_min));
+
+            $R_ratio = ($R_max - $R_min) == 0
+                ? 0
+                : (($R[$alt->id] - $R_min) / ($R_max - $R_min));
+
+            $Q[$alt->id] = $v * $S_ratio + (1 - $v) * $R_ratio;
+
             PemeringkatanVikor::updateOrCreate(
                 ['alternatif_id' => $alt->id],
                 [
@@ -66,7 +73,7 @@ class VIKORService
             );
         }
 
-        // Ranking berdasarkan Q
+        // Step 3: Ranking berdasarkan Q
         $sorted = collect($Q)->sort()->toArray();
         $rank = 1;
 

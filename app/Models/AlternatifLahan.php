@@ -25,12 +25,12 @@ class AlternatifLahan extends Model
 
     public function klasifikasi()
     {
-        return $this->hasOne(KlasifikasiLahan::class);
+        return $this->hasOne(KlasifikasiLahan::class, 'alternatif_id', 'id');
     }
 
     public function vikor()
     {
-        return $this->hasOne(PemeringkatanVikor::class);
+        return $this->hasOne(PemeringkatanVikor::class, 'alternatif_id', 'id');
     }
 }
 

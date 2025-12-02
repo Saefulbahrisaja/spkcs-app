@@ -7,17 +7,12 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    /**
-     * Form Login
-     */
+    
     public function formLogin()
     {
         return view('auth.login');
     }
 
-    /**
-     * Proses Login
-     */
     public function login(Request $request)
     {
         $request->validate([
