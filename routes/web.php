@@ -10,10 +10,13 @@ use App\Http\Controllers\AuthController;
 //use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\KriteriaController;
 use App\Http\Controllers\Admin\AHPController;
-use App\Http\Controllers\Admin\AlternatifController;
+use App\Http\Controllers\Admin\WilayahController;
 use App\Http\Controllers\Admin\KlasifikasiController;
 use App\Http\Controllers\Admin\VIKORController;
 use App\Http\Controllers\Admin\LaporanController;
+use App\Http\Controllers\AlternatifController;
+
+use Illuminate\Support\Facades\Artisan;
 //use App\Http\Controllers\Admin\ThresholdController;
 
 // GIS
@@ -45,16 +48,21 @@ Route::middleware(['auth', 'role:admin'])
     Route::get('ahp/hitung', [AHPController::class, 'hitungBobot'])->name('ahp.hitung');
 
 
-    // THRESHOLD KLASFIKASI
-    // Route::get('threshold', [ThresholdController::class, 'index'])->name('threshold.index');
-    // Route::post('threshold', [ThresholdController::class, 'store'])->name('threshold.store');
-
     // ALTERNATIF
-    Route::resource('alternatif', AlternatifController::class);
-    Route::post('alternatif/nilai', [AlternatifController::class, 'storeNilai'])->name('alternatif.nilai');
+   
+    Route::get('/alternatif/nilai', [AlternatifController::class, 'formNilai'])->name('alternatif.index');
+    Route::post('/alternatif/nilai', [AlternatifController::class, 'simpanNilai'])->name('alternatif.nilai.simpan');
 
-    // KLASIFIKASI FAO
-    Route::get('klasifikasi/hitung', [KlasifikasiController::class, 'klasifikasi'])->name('klasifikasi.hitung');
+    // WILAYAH
+    Route::resource('wilayah', WilayahController::class);
+    Route::post('wilayah/nilai', [WilayahController::class, 'storeNilai'])->name('wilayah.nilai');
+    
+
+    Route::get('/evaluasi/run', function () {
+        Artisan::call('evaluasi:lahan');
+
+        return back()->with('success', 'Evaluasi lahan berhasil dijalankan!');
+    })->name('evaluasi.run');
 
     // VIKOR
     Route::get('vikor/hitung', [VIKORController::class, 'proses'])->name('vikor.hitung');
@@ -101,7 +109,10 @@ Route::middleware(['auth', 'role:penyuluh'])
 
 });
 
-Route::get('/peta', [GISController::class, 'geojson'])->name('peta.public');
+Route::get('/map/geojson', [GISController::class, 'geojson'])->name('map.geojson');
+Route::get('/peta', function() {
+    return view('gis.index');
+});
 
 Route::get('/', function () {
     return view('welcome');

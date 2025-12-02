@@ -6,12 +6,12 @@ return [
         'title' => 'ADMIN PANEL',
         'menus' => [
             ['label' => 'Dashboard', 'route' => 'admin.dashboard'],
-            ['label' => 'Kelola Data Kriteria', 'route' => 'admin.kriteria.index'],
-            ['label' => 'Kelola Data Altenativ', 'route' => 'admin.alternatif.index'],
+            ['label' => 'Kelola Kriteria', 'route' => 'admin.kriteria.index'],
+            ['label' => 'Kelola Wilayah/Alternatif', 'route' => 'admin.wilayah.index'],
             ['label' => 'AHP Bobot', 'route' => 'admin.ahp.matrix'],
             //['label' => 'Threshold Klasifikasi', 'route' => 'admin.threshold.index'],
             //['label' => 'Klasifikasi FAO', 'route' => 'admin.klasifikasi.hitung'],
-            ['label' => 'Hasil VIKOR', 'route' => 'admin.vikor.hitung'],
+            
             ['label' => 'Laporan', 'route' => 'admin.laporan.index'],
             //['label' => 'Pengguna', 'route' => 'admin.users.index'],
         ]

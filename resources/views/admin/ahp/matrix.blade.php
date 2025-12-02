@@ -62,7 +62,10 @@
             </tbody>
         </table>
     </div>
-
+<a href="{{ route('admin.evaluasi.run') }}"
+   class="px-4 py-2 bg-green-600 text-white rounded shadow">
+    Jalankan Evaluasi Lahan
+</a>
     <button class="bg-green-600 text-white px-5 py-2 rounded mt-4 hover:bg-green-700">
         Simpan Matriks
     </button>

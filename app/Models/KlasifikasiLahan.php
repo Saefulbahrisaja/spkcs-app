@@ -11,7 +11,7 @@ class KlasifikasiLahan extends Model
 
     public function alternatif()
     {
-        return $this->belongsTo(AlternatifLahan::class);
+        return $this->belongsTo(AlternatifLahan::class, 'alternatif_id', 'id');
     }
 }
 
