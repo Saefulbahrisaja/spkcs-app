@@ -9,7 +9,7 @@
 
 <div class="card mb-4">
     <div class="card-header bg-primary text-white">
-        <strong>Input Nilai Alternatif (Grid Mode)</strong>
+        <strong>Input Nilai Alternatif</strong>
     </div>
 
     <div class="card-body">
@@ -31,17 +31,41 @@
                     <tbody>
                         @foreach($alternatifs as $alt)
                         <tr>
-                            <td class="fw-bold">{{ $alt->lokasi }}</td>
-                            @foreach($kriteria as $k)
-                            <td class="text-center">
-                                <input type="number"
-                                       name="nilai[{{ $alt->id }}][{{ $k->id }}]"
-                                       value="{{ $existing[$alt->id][$k->id] ?? '' }}"
-                                       class="form-control text-center"
-                                       min="1" max="5" required>
-                            </td>
-                            @endforeach
-                        </tr>
+    <td class="fw-bold">{{ $alt->lokasi }}</td>
+
+    @foreach($kriteria as $k)
+    <td class="text-center">
+
+        @php
+            $selected = $existing[$alt->id][$k->id] ?? null;
+
+            $labels = [
+                1 => 'Sangat Buruk',
+                2 => 'Buruk',
+                3 => 'Cukup',
+                4 => 'Baik',
+                5 => 'Sangat Baik'
+            ];
+        @endphp
+
+        <select name="nilai[{{ $alt->id }}][{{ $k->id }}]"
+                class="form-select text-center nilai-select"
+                data-selected="{{ $selected }}">
+            <option value="">Pilih...</option>
+
+            @foreach([1,2,3,4,5] as $n)
+                <option value="{{ $n }}" 
+                    {{ $selected == $n ? 'selected' : '' }}>
+                    {{ $n }} — {{ $labels[$n] }}
+                </option>
+            @endforeach
+        </select>
+
+    </td>
+    @endforeach
+
+</tr>
+
                         @endforeach
                     </tbody>
                 </table>

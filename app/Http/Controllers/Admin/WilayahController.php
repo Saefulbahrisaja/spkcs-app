@@ -14,7 +14,8 @@ class WilayahController extends Controller
     {
         return view('admin.wilayah.index', [
             'data' => AlternatifLahan::all(),
-            'kriteria' => Kriteria::all()
+            'kriteria' => Kriteria::all(),
+            'nilaiAlternatif' => NilaiAlternatif::all()->groupBy('alternatif_id'),
         ]);
 
     }

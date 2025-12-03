@@ -10,7 +10,7 @@
     <div class="card-header">
         <a href="{{ route('admin.wilayah.create') }}" class="btn btn-success btn-sm">Tambah Lokasi</a>
         <a href="{{ route('admin.alternatif.index') }}" class="btn btn-primary btn-sm">Input Nilai Alternatif</a>
-        <a href="{{ route('admin.evaluasi.run') }}"class="btn btn-primary btn-sm"><i class="fas fa-play-circle"></i> Jalankan Evaluasi Lahan</a>
+       
     </div>
 
     <div class="card-body">
@@ -93,15 +93,53 @@
                         </thead>
                         <tbody>
                             @foreach($data as $alt)
-                                <tr>
+                               <tr>
                                     <td class="fw-semibold text-start">{{ $alt->lokasi }}</td>
+
+                                    @php
+                                        $labels = [
+                                            1 => 'Sangat Buruk',
+                                            2 => 'Buruk',
+                                            3 => 'Cukup',
+                                            4 => 'Baik',
+                                            5 => 'Sangat Baik'
+                                        ];
+
+                                        // warna background
+                                        $colors = [
+                                            1 => '#dc3545', // merah
+                                            2 => '#fd7e14', // oranye
+                                            3 => '#ffc107', // kuning
+                                            4 => '#0d6efd', // biru
+                                            5 => '#198754', // hijau
+                                        ];
+
+                                        $textColors = [
+                                            1 => 'white',
+                                            2 => 'white',
+                                            3 => 'black',
+                                            4 => 'white',
+                                            5 => 'white',
+                                        ];
+                                    @endphp
+
                                     @foreach($kriteria as $k)
                                         @php
-                                            $nilai = $alt->nilai->where('kriteria_id', $k->id)->first();
+                                            $nilaiObj = $alt->nilai->where('kriteria_id', $k->id)->first();
+                                            $v = $nilaiObj->nilai ?? null;
+
+                                            $bg = $v ? $colors[$v] : '#e9ecef';
+                                            $tc = $v ? $textColors[$v] : 'black';
+                                            $label = $v ? $labels[$v] : '-';
                                         @endphp
-                                        <td>{{ $nilai->nilai ?? '-' }}</td>
+
+                                        <td style="background: {{ $bg }}; color: {{ $tc }}; font-weight:600;">
+                                            {{ $label }}
+                                        </td>
                                     @endforeach
+
                                 </tr>
+
                             @endforeach
                         </tbody>
                     </table>

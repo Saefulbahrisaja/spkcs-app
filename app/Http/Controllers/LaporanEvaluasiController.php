@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\laporan_evaluasi;
 use Illuminate\Http\Request;
 
 class LaporanEvaluasiController extends Controller
@@ -13,6 +12,12 @@ class LaporanEvaluasiController extends Controller
     public function index()
     {
         //
+    }
+
+    public function laporanEvaluasi()
+    {
+        $laporan = \App\Models\LaporanEvaluasi::latest()->get();
+        return view('admin.laporan.index', compact('laporan'));
     }
 
     /**

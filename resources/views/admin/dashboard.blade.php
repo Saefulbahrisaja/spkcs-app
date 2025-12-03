@@ -26,56 +26,48 @@
         border-radius: 3px;
         margin-right: 6px;
     }
+    /* Loading Geometri */
+    /* Progress Loading GeoJSON */
+#progress-box {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px 30px;
+    border-radius: 8px;
+    z-index: 9999;
+    width: 280px;
+    box-shadow: 0 0 12px rgba(0,0,0,0.2);
+}
+
+#progress-label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    text-align: center;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 12px;
+    background: #eee;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #007bff;
+    transition: width 0.2s;
+}
 </style>
 @endsection
-
-
 @section('content')
-
-<!-- ======================= DASHBOARD CARDS ======================= -->
-<div class="row">
-
-    <!-- Jumlah Kriteria -->
-    <div class="col-xl-3 col-md-6">
-        <div class="card bg-primary text-white mb-4">
-            <div class="card-body">Jumlah Kriteria</div>
-            <div class="card-footer d-flex align-items-center justify-content-between">
-                <a class="small text-white stretched-link">{{ $kriteria ?? 0 }}</a>
-                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Alternatif Lahan -->
-    <div class="col-xl-3 col-md-6">
-        <div class="card bg-warning text-white mb-4">
-            <div class="card-body">Alternatif Lahan</div>
-            <div class="card-footer d-flex align-items-center justify-content-between">
-                <a class="small text-white stretched-link">{{ $alternatif ?? 0 }}</a>
-                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Laporan -->
-    <div class="col-xl-3 col-md-6">
-        <div class="card bg-success text-white mb-4">
-            <div class="card-body">Laporan</div>
-            <div class="card-footer d-flex align-items-center justify-content-between">
-                <a class="small text-white stretched-link">{{ $laporan ?? 0 }}</a>
-                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
-            </div>
-        </div>
-    </div>
-</div>
-
+<p>Selamat datang, {{ auth()->user()->nama }}</p>
 <!-- ======================= RINGKASAN LUAS ======================= -->
 <div class="row mb-4" id="ringkasanLuasContainer">
-
-    <!-- Kartunya akan dimuat lewat fetch() -->
 </div>
-
-
 <!-- ======================= MAP SECTION ======================= -->
 <div class="card shadow-sm mb-4">
     <div class="card-header">
@@ -83,85 +75,44 @@
     </div>
 
     <div class="card-body position-relative">
-
         <!-- Map -->
-        <div id="map"></div>
-        <!-- Legend -->
-        <div class="legend-box position-absolute" style="top: 15px; right: 15px;">
-            <div><span class="legend-color" style="background:#00aa00"></span> S1 – Sangat Sesuai</div>
-            <div><span class="legend-color" style="background:#d4d40d"></span> S2 – Cukup Sesuai</div>
-            <div><span class="legend-color" style="background:#ff8800"></span> S3 – Marginal</div>
-            <div><span class="legend-color" style="background:#cc0000"></span> N – Tidak Sesuai</div>
+        <div id="progress-box" style="display:none;">
+            <div id="progress-label">Memuat data luas  0%</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
         </div>
+        <div id="map"></div>
     </div>
 </div>
 
 @endsection
-
-
-@section('content')
-
-<!-- ======================= DASHBOARD CARDS ======================= -->
-<div class="row">
-    <div class="col-xl-3 col-md-6">
-        <div class="card bg-primary text-white mb-4">
-            <div class="card-body">Jumlah Kriteria</div>
-            <div class="card-footer d-flex align-items-center justify-content-between">
-                <a class="small text-white stretched-link" href="#">{{ $kriteria ?? 0 }}</a>
-                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6">
-        <div class="card bg-warning text-white mb-4">
-            <div class="card-body">Alternatif Lahan</div>
-            <div class="card-footer d-flex align-items-center justify-content-between">
-                <a class="small text-white stretched-link" href="#">{{ $alternatif ?? 0 }}</a>
-                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6">
-        <div class="card bg-success text-white mb-4">
-            <div class="card-body">Laporan</div>
-            <div class="card-footer d-flex align-items-center justify-content-between">
-                <a class="small text-white stretched-link" href="#">{{ $laporan ?? 0 }}</a>
-                <div class="small text-white"><i class="fas fa-angle-right"></i></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ======================= MAP SECTION ======================= -->
-<div class="card shadow-sm mb-4">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="fas fa-map me-2"></i>Peta Kesesuaian Lahan</h5>
-    </div>
-
-    <div class="card-body position-relative">
-
-        <!-- Map -->
-        <div id="map"></div>
-
-        <!-- Legend -->
-        <div class="legend-box position-absolute" style="top: 15px; right: 15px;">
-            <div><span class="legend-color" style="background:#00aa00"></span> S1 – Sangat Sesuai</div>
-            <div><span class="legend-color" style="background:#d4d40d"></span> S2 – Cukup Sesuai</div>
-            <div><span class="legend-color" style="background:#ff8800"></span> S3 – Marginal</div>
-            <div><span class="legend-color" style="background:#cc0000"></span> N – Tidak Sesuai</div>
-        </div>
-    </div>
-</div>
-
-@endsection
-
-
 @section('scripts')
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
+// =============================
+// ELEMENT PROGRESS BAR
+// =============================
+var box   = document.getElementById('progress-box');
+var label = document.getElementById('progress-label');
+var fill  = document.getElementById('progress-fill');
+
+// Tampilkan progress box
+box.style.display = "block";
+
+let progress = 0;
+
+// Set progress function
+function setProgress(p, text) {
+    progress = Math.min(100, p);
+    fill.style.width = progress + "%";
+    label.innerHTML = text + " " + Math.round(progress) + "%";
+}
+
+// =============================
+// 1. LOAD RINGKASAN LUAS (0–40%)
+// =============================
 fetch("{{ route('admin.ringkasan.luas') }}")
     .then(r => r.json())
     .then(data => {
@@ -175,17 +126,18 @@ fetch("{{ route('admin.ringkasan.luas') }}")
             <div class="col-xl-3 col-md-6">
                 <div class="card border-left-success shadow mb-4">
                     <div class="card-body">
-                        <h6 class="text-success fw-bold">Total Luas S1</h6>
-                        <div class="h5 mb-0">${totalS1.toFixed(2)} ha</div>
+                        <h6 class="text-success fw-bold">Total Luas Sangat Sesuai</h6>
+                        <div class="h5 mb-0">${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalS1)}
+ ha</div>
                     </div>
                 </div>
             </div>
-
             <div class="col-xl-3 col-md-6">
                 <div class="card border-left-warning shadow mb-4">
                     <div class="card-body">
-                        <h6 class="text-warning fw-bold">Total Luas S2</h6>
-                        <div class="h5 mb-0">${totalS2.toFixed(2)} ha</div>
+                        <h6 class="text-warning fw-bold">Total Luas Cukup Sesuai</h6>
+                        <div class="h5 mb-0">${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalS2)}
+ ha</div>
                     </div>
                 </div>
             </div>
@@ -193,8 +145,9 @@ fetch("{{ route('admin.ringkasan.luas') }}")
             <div class="col-xl-3 col-md-6">
                 <div class="card border-left-orange shadow mb-4">
                     <div class="card-body">
-                        <h6 class="text-orange fw-bold">Total Luas S3</h6>
-                        <div class="h5 mb-0">${totalS3.toFixed(2)} ha</div>
+                        <h6 class="text-orange fw-bold">Total Luas Marginal</h6>
+                        <div class="h5 mb-0">${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalS3)}
+ ha</div>
                     </div>
                 </div>
             </div>
@@ -202,13 +155,18 @@ fetch("{{ route('admin.ringkasan.luas') }}")
             <div class="col-xl-3 col-md-6">
                 <div class="card border-left-danger shadow mb-4">
                     <div class="card-body">
-                        <h6 class="text-danger fw-bold">Total Luas N</h6>
-                        <div class="h5 mb-0">${totalN.toFixed(2)} ha</div>
+                        <h6 class="text-danger fw-bold">Total Luas Tidak Sesuai</h6>
+                        <div class="h5 mb-0">${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalN)}
+ ha</div>
                     </div>
                 </div>
             </div>
         `;
+        // Progress selesai load luas → 40%
+        setProgress(40, "Memuat data geometri");
+
     });
+
 // =========================
 // BASEMAPS
 // =========================
@@ -255,21 +213,36 @@ var classLayers = {
     N:  layerN
 };
 
-// =========================
-// LOAD GEOJSON
-// =========================
+// ELEMENT PROGRESS
+var box   = document.getElementById('progress-box');
+var label = document.getElementById('progress-label');
+var fill  = document.getElementById('progress-fill');
+
+// Tampilkan progress
+box.style.display = "block";
+
 fetch("{{ route('map.geojson') }}")
     .then(r => r.json())
     .then(json => {
+
+        const total = json.features.length;
+        let loaded = 0;
+
         L.geoJSON(json, {
             style: f => ({
                 color: warnaKelas(f.properties.kelas_kesesuaian),
                 weight: 2,
                 fillOpacity: 0.45
             }),
-            onEachFeature: (feature, layer) => {
-                let p = feature.properties;
 
+            onEachFeature: (feature, layer) => {
+
+                // Update progress 40–100%
+                loaded++;
+                let geoPercent = 40 + (loaded / total * 60);
+                setProgress(geoPercent, "Memuat geometri");
+
+                let p = feature.properties;
                 layer.bindPopup(`
                     <strong>Lokasi:</strong> ${p.lokasi}<br>
                     <strong>Kelas:</strong> ${p.kelas_kesesuaian}<br>
@@ -277,32 +250,33 @@ fetch("{{ route('map.geojson') }}")
                     <strong>VIKOR Ranking:</strong> ${p.vikor_ranking}
                 `);
 
-                // Masukkan feature ke layerGroup sesuai kelas
                 let kelas = p.kelas_kesesuaian || 'N';
                 classLayers[kelas].addLayer(layer);
             }
         });
 
-        // Tambahkan semua layer ke map (default: ON)
         layerS1.addTo(map);
         layerS2.addTo(map);
         layerS3.addTo(map);
         layerN.addTo(map);
+
+        setTimeout(() => box.style.display = "none", 700);
+    })
+    .catch(err => {
+        console.error(err);
+        label.innerHTML = "Gagal memuat data/data tidak ada!";
     });
 
-// =========================
-// LAYER CONTROL
-// =========================
 var baseMaps = {
     "OSM Standard": osm,
     "Esri Satellite": esriSat
 };
 
 var overlayMaps = {
-    "S1 - Sangat Sesuai": layerS1,
-    "S2 - Cukup Sesuai": layerS2,
-    "S3 - Marginal": layerS3,
-    "N - Tidak Sesuai": layerN
+    '<span style="display:inline-block;width:14px;height:14px;background:#00aa00;margin-right:6px;border-radius:2px;"></span> S1 - Sangat Sesuai': layerS1,
+    '<span style="display:inline-block;width:14px;height:14px;background:#d4d40d;margin-right:6px;border-radius:2px;"></span> S2 - Cukup Sesuai': layerS2,
+    '<span style="display:inline-block;width:14px;height:14px;background:#f97316;margin-right:6px;border-radius:2px;"></span> S3 - Marginal': layerS3,
+    '<span style="display:inline-block;width:14px;height:14px;background:#cc0000;margin-right:6px;border-radius:2px;"></span> N - Tidak Sesuai': layerN
 };
 
 L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
