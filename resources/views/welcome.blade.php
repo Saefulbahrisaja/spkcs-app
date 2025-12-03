@@ -37,8 +37,16 @@
                 </div>
                 <div class="col-lg-5">
                     <h1 class="font-weight-light">Banten Spability</h1>
-                    <p>Banten SPABILITY adalah platform digital yang menyediakan informasi komprehensif tentang potensi pertanian dan sumber daya alam di Provinsi Banten. Kami berkomitmen untuk memberdayakan petani lokal melalui teknologi dan data yang akurat.</p>
-                    <p>Tanaman Padi Sawah merupakan komoditas unggulan Banten yang memiliki produktivitas tinggi. Sistem pertanian sawah tradisional kami menghasilkan padi berkualitas premium dengan hasil panen yang optimal sepanjang tahun.</p>
+                    <p>adalah sebuah platform cerdas berbasis webGIS yang dirancang untuk mengevaluasi kesesuaian lahan tanaman
+padi sawah secara spasial menggunakan data fisik lahan, topografi
+dan iklim, serta mekanisme pembobotan ilmiah yang dapat
+dikonfigurasi oleh pakar. Sistem ini menyediakan visualisasi peta
+kesesuaian (S1, S2, S3, N), ketersediaan lahan, laporan ringkas luas
+kesesuaian per wilayah, dan modul validasi pakar. </p>
+                    <p>Antarmuka yang
+user friendly dan alur analisis yang terstandar, Banten-SPABILITY
+mendukung pengambilan keputusan berbasis data untuk
+perencanaan tanaman padi sawah di Provinsi Banten.</p>
                     <a class="btn btn-primary" href="#!">Selengkapnya</a>
                    
                 </div>
@@ -84,92 +92,57 @@
         </footer>
         <!-- Bootstrap core JS-->
          <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+         <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
         <!-- Core theme JS-->
         <script src="js/scripts.js"></script>
-        @section('scripts')
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
+     
 <script>
-// ================== BASemaps =====================
-var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OSM'
-});
-
-var esriSat = L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
-    { attribution: 'Tiles © Esri' }
-);
-
-var terrain = L.tileLayer(
-    'https://{s}.tile.stamen.com/terrain/{z}/{x}/{y}.jpg', 
-    { attribution: 'Map tiles by Stamen Terrain' }
-);
-
-// ================== Inisialisasi Map =====================
-var map = L.map('map', {
-    center: [-6.2, 106.15],
-    zoom: 11,
-    layers: [osm]   // layer default
-});
-
-// ================== Warna Kelas =====================
-function warnaKelas(k) {
-    return {
-        'S1': '#00aa00',
-        'S2': '#d4d40d',
-        'S3': '#ff8800',
-        'N':  '#cc0000'
-    }[k] || '#999';
-}
-
-// ================== Overlay Kesesuaian Lahan =====================
-var layerKesesuaian = L.layerGroup();
-
-// Load GeoJSON dari Controller
-fetch("{{ route('map.geojson') }}")
-    .then(r => r.json())
-    .then(json => {
-        var geoLayer = L.geoJSON(json, {
-            style: feature => ({
-                color: warnaKelas(feature.properties.kelas_kesesuaian),
-                weight: 2,
-                fillOpacity: 0.5
-            }),
-            onEachFeature: (feature, layer) => {
-                let p = feature.properties;
-                layer.bindPopup(`
-                    <div class='text-sm'>
-                        <b>Lokasi:</b> ${p.lokasi}<br>
-                        <b>Kelas Kesesuaian:</b> ${p.kelas_kesesuaian ?? '-'}<br><br>
-
-                        <b>Skor Total:</b> ${p.nilai_total ?? '-'}<br>
-                        <b>Ranking VIKOR:</b> ${p.vikor_ranking ?? '-'}<br>
-                        <b>Q-Value:</b> ${p.vikor_q ?? '-'}<br>
-                    </div>
-                `);
-            }
-        });
-
-        geoLayer.addTo(layerKesesuaian);
-        layerKesesuaian.addTo(map);
+    // ================== INISIALISASI MAP =====================
+    var map = L.map('map', {
+        center: [-6.3, 106.15],  
+        zoom: 9
     });
 
-// ================== Layer Control =====================
-var baseMaps = {
-    "OSM Standard": osm,
-    "Esri Satellite": esriSat,
-    "Stamen Terrain": terrain
-};
+    // Basemap OSM
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-var overlayMaps = {
-    "Kesesuaian Lahan": layerKesesuaian
-};
+    // ================== WARNA KELAS =====================
+    function warnaKelas(k) {
+        return {
+            "S1": "#00aa00",
+            "S2": "#d4d40d",
+            "S3": "#ff8800",
+            "N":  "#cc0000"
+        }[k] || "#666";
+    }
 
-L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
-
+    // ================== LOAD GEOJSON SAJA =====================
+    fetch("{{ route('map.geojson') }}")
+        .then(res => res.json())
+        .then(data => {
+            L.geoJSON(data, {
+                style: f => ({
+                    color: warnaKelas(f.properties.kelas_kesesuaian),
+                    weight: 2,
+                    fillOpacity: 0.5
+                }),
+                onEachFeature: (f, layer) => {
+                    let p = f.properties;
+                    layer.bindPopup(`
+                        <b>Lokasi:</b> ${p.lokasi} <br>
+                        <b>Kelas:</b> ${p.kelas_kesesuaian ?? "-"}
+                    `);
+                }
+            }).addTo(map);
+        })
+        .catch(err => console.error("GeoJSON error:", err));
 </script>
-@endsection
+
     </body>
 </html>

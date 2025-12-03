@@ -7,9 +7,10 @@ return [
         'menus' => [
             ['label' => 'Dashboard', 'route' => 'admin.dashboard'],
             ['label' => 'Kelola Kriteria', 'route' => 'admin.kriteria.index'],
-            ['label' => 'Kelola Wilayah/Alternatif', 'route' => 'admin.wilayah.index'],
-            ['label' => 'AHP Bobot', 'route' => 'admin.ahp.matrix'],
-            //['label' => 'Threshold Klasifikasi', 'route' => 'admin.threshold.index'],
+            ['label' => 'Pairwise AHP', 'route' => 'admin.ahp.matrix'],
+            ['label' => 'Kelola Alternatif', 'route' => 'admin.wilayah.index'],
+            
+            ['label' => 'Ringkasan luas', 'route' => 'admin.ringkasan.chart'],
             ['label' => 'Setting Batas Kelas', 'route' => 'admin.batas.index'],
             
             ['label' => 'Laporan', 'route' => 'admin.laporan.index'],

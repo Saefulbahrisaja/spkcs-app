@@ -1,18 +1,51 @@
 @extends('layouts.app')
 
 @section('content')
-<h1 class="text-xl font-bold mb-4">Tambah Poligon Wilayah</h1>
 
-<form action="{{ route('admin.wilayah.store') }}" method="POST" enctype="multipart/form-data">
-    @csrf
-    <label>Nama Lokasi</label>
-    <input type="text" name="lokasi" class="border p-2 w-full mb-3" required>
+<ol class="breadcrumb mb-4">
+    <li class="breadcrumb-item"><a href="{{ route('admin.wilayah.index') }}">Daftar Lokasi</a></li>
+    <li class="breadcrumb-item active">Tambah Poligon Wilayah</li>
+</ol>
 
-    <label>Upload GeoJSON</label>
-    <input type="file" name="geojson" accept=".json,.geojson" class="border p-2 w-full mb-3">
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <strong>Form Tambah Wilayah</strong>
+    </div>
 
-    <button class="bg-blue-600 text-white px-4 py-2 rounded">
-        Simpan Alternatif
-    </button>
-</form>
+    <div class="card-body">
+
+        <form action="{{ route('admin.wilayah.store') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+
+            {{-- NAMA LOKASI --}}
+            <div class="mb-3">
+                <label class="form-label">Nama Lokasi</label>
+                <input type="text" name="lokasi" class="form-control" 
+                       placeholder="Masukkan nama lokasi" required>
+            </div>
+
+            {{-- UPLOAD GEOJSON --}}
+            <div class="mb-3">
+                <label class="form-label">Upload GeoJSON Polygon</label>
+                <input type="file" name="geojson" class="form-control" 
+                       accept=".json,.geojson" required>
+
+                <small class="text-muted">
+                    File harus berupa <strong>.geojson</strong> atau <strong>.json</strong> berisi objek Polygon/MultiPolygon.
+                </small>
+            </div>
+
+            {{-- TOMBOL --}}
+            <button class="btn btn-success">
+                <i class="fas fa-save"></i> Simpan Wilayah
+            </button>
+            <a href="{{ route('admin.wilayah.index') }}" class="btn btn-secondary ms-2">
+                Batal
+            </a>
+
+        </form>
+
+    </div>
+</div>
+
 @endsection

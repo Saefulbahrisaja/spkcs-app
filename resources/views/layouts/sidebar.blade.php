@@ -1,26 +1,30 @@
-<aside class="w-60 bg-white shadow h-screen overflow-y-auto">
-    <ul class="p-4 space-y-2">
+<div id="layoutSidenav_nav">
+    <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
+        <div class="sb-sidenav-menu">
+            <div class="nav">
+                    @php
+                        $user = auth()->user();
+                            @endphp
+                        @if($user)
+                            @php
+                                $menu = config('menus.' . $user->role);
+                                    @endphp
+                            @if($menu)
+                            <div class="sb-sidenav-menu-heading">{{ $menu['title'] }}</div>
+                                @foreach($menu['menus'] as $item)
+                                <a class="nav-link" href="{{ route($item['route']) }}">
+                                    <div class="sb-nav-link-icon"><i class="fas fa-chart-area"></i></div>
+                                {{ $item['label'] }}
+                                </a>
+                                @endforeach
+                            @endif
+                         @endif
+                            </div>
+            </div>
+            <div class="sb-sidenav-footer">
+            <div class="small">Logged in as:</div>
+                        {{ $menu['title'] }}
+            </div>
+    </nav>
+</div>
 
-        @php
-            $user = auth()->user();
-        @endphp
-
-        @if($user)
-            @php
-                $menu = config('menus.' . $user->role);
-            @endphp
-
-            @if($menu)
-                <li class="font-bold mb-4 text-gray-800">{{ $menu['title'] }}</li>
-
-                @foreach($menu['menus'] as $item)
-                    <li>
-                        <a href="{{ route($item['route']) }}" class="block px-3 py-2 text-gray-700 hover:bg-blue-100 hover:text-blue-800 rounded transition duration-200">{{ $item['label'] }}</a>
-                    </li>
-                @endforeach
-            @endif
-
-        @endif
-
-    </ul>
-</aside>

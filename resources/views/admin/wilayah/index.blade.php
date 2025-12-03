@@ -1,105 +1,117 @@
 @extends('layouts.app')
+
 @section('content')
 
-<h1 class="text-xl font-bold mb-4">Daftar Lokasi</h1>
+<ol class="breadcrumb mb-4">
+    <li class="breadcrumb-item active">Daftar Lokasi & Nilai Alternatif</li>
+</ol>
 
-<a href="{{ route('admin.wilayah.create') }}" 
-    class="bg-blue-600 text-white px-3 py-2 rounded">Tambah Lokasi</a>
-<a href="{{ route('admin.alternatif.index') }}" 
-    class="bg-blue-600 text-white px-3 py-2 rounded ml-2">Input Nilai Alternatif</a>
+<div class="card mb-4">
+    <div class="card-header">
+        <a href="{{ route('admin.wilayah.create') }}" class="btn btn-success btn-sm">Tambah Lokasi</a>
+        <a href="{{ route('admin.alternatif.index') }}" class="btn btn-primary btn-sm">Input Nilai Alternatif</a>
+        <a href="{{ route('admin.evaluasi.run') }}"class="btn btn-primary btn-sm"><i class="fas fa-play-circle"></i> Jalankan Evaluasi Lahan</a>
+    </div>
 
-<div class="mt-6">
-  <div class="flex border-b">
-     <button class="tab-button px-4 py-2 font-semibold border-b-2 border-blue-600 text-blue-600" onclick="showTab(0)">Daftar Lokasi</button>
-     <button class="tab-button px-4 py-2 font-semibold text-gray-600" onclick="showTab(1)">Daftar Nilai Alternatif</button>
-  </div>
+    <div class="card-body">
 
-  <!-- Tab 1: Daftar Lokasi -->
-  <div id="tab-0" class="tab-content">
-     <table class="table-auto w-full mt-4 bg-white shadow">
-        <thead>
-          <tr class="bg-gray-200">
-             <th class="p-2">Lokasi</th>
-             <th class="p-2">Lat/Long</th>
-             <th class="p-2">Nilai</th>
-             <th class="p-2">Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          @foreach($data as $item)
-             <tr class="border-b">
-                <td class="p-2">{{ $item->lokasi }}</td>
-                <td class="p-2">
-                  <a href="https://maps.google.com/?q={{ $item->lat }},{{ $item->lng }}" target="_blank" class="text-blue-600 hover:underline">
-                     {{ $item->lat }}, {{ $item->lng }}
-                  </a>
-                </td>
-                <td class="p-2">{{ $item->nilai_total }}</td>
-                <td class="p-2">
-                  <form action="{{ route('admin.wilayah.destroy', $item->id) }}" method="POST" class="inline">
-                     @csrf
-                     @method('DELETE')
-                     <button type="submit" onclick="return confirm('Hapus?')" class="bg-red-600 text-white px-2 py-1 rounded">Hapus</button>
-                  </form>
-                </td>
-             </tr>
-          @endforeach
-        </tbody>
-     </table>
-  </div>
+        <!-- NAVIGATION TAB -->
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="lokasi-tab" data-bs-toggle="tab" 
+                        data-bs-target="#lokasi" type="button" role="tab">
+                    Daftar Lokasi
+                </button>
+            </li>
 
-  <!-- Tab 2: Daftar Nilai Alternatif -->
-  <div id="tab-1" class="tab-content hidden">
-     <div class="bg-white shadow rounded p-4 mt-4">
-        <table class="w-full table-auto border text-sm">
-          <thead>
-             <tr class="bg-gray-200 text-left">
-                <th class="p-2 border">Alternatif</th>
-                @foreach($kriteria as $k)
-                  <th class="p-2 border">{{ $k->nama_kriteria }}</th>
-                @endforeach
-             </tr>
-          </thead>
-          <tbody>
-             @foreach($data as $alt)
-                <tr>
-                  <td class="p-2 border font-semibold">{{ $alt->lokasi }}</td>
-                  @foreach($kriteria as $k)
-                     @php
-                        $nilai = $alt->nilai->where('kriteria_id', $k->id)->first();
-                     @endphp
-                     <td class="p-2 border text-center">
-                        {{ $nilai->nilai ?? '-' }}
-                     </td>
-                  @endforeach
-                </tr>
-             @endforeach
-          </tbody>
-        </table>
-     </div>
-  </div>
-</div>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="nilai-tab" data-bs-toggle="tab" 
+                        data-bs-target="#nilai" type="button" role="tab">
+                    Daftar Nilai Alternatif
+                </button>
+            </li>
 
-<script>
-  function showTab(tabIndex) {
-     // Hide all tabs
-     document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.add('hidden');
-     });
-     
-     // Remove active state from all buttons
-     document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.classList.remove('border-b-2', 'border-blue-600', 'text-blue-600');
-        btn.classList.add('text-gray-600');
-     });
-     
-     // Show selected tab
-     document.getElementById('tab-' + tabIndex).classList.remove('hidden');
-     
-     // Add active state to clicked button
-     event.target.classList.add('border-b-2', 'border-blue-600', 'text-blue-600');
-     event.target.classList.remove('text-gray-600');
-  }
-</script>
+        </ul>
+
+        <!-- TAB CONTENT -->
+        <div class="tab-content border p-3" id="myTabContent">
+
+            <!-- ================= TAB 1 : DAFTAR LOKASI ================= -->
+            <div class="tab-pane fade show active" id="lokasi" role="tabpanel">
+
+                <table class="table table-bordered table-striped" id="datatablesSimple">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Lokasi</th>
+                            <th>Lat/Long</th>
+                            <th>Nilai Total</th>
+                            <th style="width:120px">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($data as $item)
+                        <tr>
+                            <td>{{ $item->lokasi }}</td>
+                            <td>
+                                <a href="https://maps.google.com/?q={{ $item->lat }},{{ $item->lng }}" 
+                                   target="_blank" class="text-primary">
+                                   {{ $item->lat }}, {{ $item->lng }}
+                                </a>
+                            </td>
+                            <td>{{ $item->nilai_total }}</td>
+                            <td>
+                                <form action="{{ route('admin.wilayah.destroy', $item->id) }}" 
+                                      method="POST" class="d-inline">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" 
+                                        onclick="return confirm('Hapus lokasi?')"
+                                        class="btn btn-danger btn-sm">
+                                        Hapus
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+
+            </div>
+
+            <!-- ================= TAB 2 : NILAI ALTERNATIF ================= -->
+            <div class="tab-pane fade" id="nilai" role="tabpanel">
+
+                <div class="table-responsive mt-3">
+                    <table class="table table-bordered table-sm text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Alternatif</th>
+                                @foreach($kriteria as $k)
+                                    <th>{{ $k->nama_kriteria }}</th>
+                                @endforeach
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data as $alt)
+                                <tr>
+                                    <td class="fw-semibold text-start">{{ $alt->lokasi }}</td>
+                                    @foreach($kriteria as $k)
+                                        @php
+                                            $nilai = $alt->nilai->where('kriteria_id', $k->id)->first();
+                                        @endphp
+                                        <td>{{ $nilai->nilai ?? '-' }}</td>
+                                    @endforeach
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+        </div><!-- end tab content -->
+
+    </div><!-- end card-body -->
+</div><!-- end card -->
 
 @endsection

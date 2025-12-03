@@ -2,6 +2,7 @@
 
 @section('styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
 <style>
     #loading {
         position: fixed;
@@ -14,105 +15,116 @@
         display: none;
         z-index: 9999;
         text-align: center;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
 
     .spinner {
-        border: 4px solid #f3f3f3;
+        border: 4px solid #ddd;
         border-top: 4px solid #3498db;
         border-radius: 50%;
         width: 40px;
         height: 40px;
         animation: spin 1s linear infinite;
-        margin: 0 auto 15px;
+        margin: auto;
     }
 
     @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
-
-    #legend {
-        background: white;
-        padding: 15px;
-        border-radius: 5px;
-        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-        font-size: 14px;
-    }
-
-    #legend b {
-        display: block;
-        margin-bottom: 10px;
-        font-size: 16px;
-    }
-
-    #legend span {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        margin-right: 8px;
-        vertical-align: middle;
-    }
-
-    #legend div {
-        margin: 5px 0;
-    }
 </style>
 @endsection
 
 @section('content')
 
-<div class="flex gap-4">
-    <div class="flex-1">
-        <h1 class="text-xl font-bold mb-4">Peta Kesesuaian Lahan</h1>
-        <div id="map" class="w-full" style="height: 600px;"></div>
+<ol class="breadcrumb mb-4">
+    <li class="breadcrumb-item active">Peta Kesesuaian Lahan</li>
+</ol>
+
+<div class="row">
+
+    <!-- MAP AREA -->
+    <div class="col-md-9 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-map me-2"></i>Peta Kesesuaian Lahan</h5>
+            </div>
+            <div class="card-body p-0">
+                <div id="map" style="width: 100%; height: 600px; border-radius: 0 0 6px 6px;"></div>
+            </div>
+        </div>
     </div>
 
-    {{-- LEGEND SIDEBAR --}}
-    <div id="legend" style="width: 200px; height: fit-content;">
-        <b>Legenda</b>
-        <div><span style="background:#00aa00;"></span> S1 (Sangat Sesuai)</div>
-        <div><span style="background:#d4d40d;"></span> S2 (Cukup Sesuai)</div>
-        <div><span style="background:#ff8800;"></span> S3 (Sesuai Marginal)</div>
-        <div><span style="background:#cc0000;"></span> N (Tidak Sesuai)</div>
+    <!-- LEGEND -->
+    <div class="col-md-3 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong>Legenda</strong>
+            </div>
+            <div class="card-body">
+
+                <div class="d-flex align-items-center mb-2">
+                    <span class="me-2" style="width:20px; height:20px; background:#00aa00; border-radius:4px;"></span>
+                    S1 — Sangat Sesuai
+                </div>
+
+                <div class="d-flex align-items-center mb-2">
+                    <span class="me-2" style="width:20px; height:20px; background:#d4d40d; border-radius:4px;"></span>
+                    S2 — Cukup Sesuai
+                </div>
+
+                <div class="d-flex align-items-center mb-2">
+                    <span class="me-2" style="width:20px; height:20px; background:#ff8800; border-radius:4px;"></span>
+                    S3 — Sesuai Marginal
+                </div>
+
+                <div class="d-flex align-items-center">
+                    <span class="me-2" style="width:20px; height:20px; background:#cc0000; border-radius:4px;"></span>
+                    N — Tidak Sesuai
+                </div>
+
+            </div>
+        </div>
     </div>
+
 </div>
 
+<!-- LOADING -->
 <div id="loading">
-    <div class="spinner"></div>
-    <p>Memuat data geometri...</p>
+    <div class="spinner mb-3"></div>
+    <p class="mb-0">Memuat data geometri...</p>
 </div>
 
 @endsection
 
 @section('scripts')
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-easyprint/dist/bundle.min.js"></script>
 
 <script>
-// ================== BASE MAPS =====================
+// ========== BASEMAPS ==========
 var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OSM'
+    maxZoom: 19, attribution: '© OSM'
 });
 
 var esriSat = L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     { attribution: 'Tiles © Esri' }
 );
 
 var terrain = L.tileLayer(
-    'https://{s}.tile.stamen.com/terrain/{z}/{x}/{y}.jpg', 
-    { attribution: 'Map tiles by Stamen Terrain' }
+    'https://{s}.tile.stamen.com/terrain/{z}/{x}/{y}.jpg',
+    { attribution: 'Stamen Terrain' }
 );
 
-// ================== INISIALISASI MAP =====================
+// ========== INITIALIZE MAP ==========
 var map = L.map('map', {
-    center: [-6.2, 106.15],
-    zoom: 11,
+    center: [-6.5, 106.16],
+    zoom: 9,
     layers: [osm]
 });
 
-// ================== WARNA KELAS =====================
+// ========== CLASS COLORS ==========
 function warnaKelas(k) {
     return {
         'S1': '#00aa00',
@@ -122,55 +134,51 @@ function warnaKelas(k) {
     }[k] || '#999';
 }
 
-// ================== OVERLAY KESESUAIAN LAHAN =====================
+// ========== LOAD GEOJSON ==========
 var layerKesesuaian = L.layerGroup();
-
-// Load GeoJSON dengan loading animation
 document.getElementById('loading').style.display = 'block';
 
 fetch("{{ route('map.geojson') }}")
     .then(r => r.json())
     .then(json => {
-        var geoLayer = L.geoJSON(json, {
-            style: feature => ({
-                color: warnaKelas(feature.properties.kelas_kesesuaian),
+        L.geoJSON(json, {
+            style: f => ({
+                color: warnaKelas(f.properties.kelas_kesesuaian),
                 weight: 2,
                 fillOpacity: 0.5
             }),
             onEachFeature: (feature, layer) => {
                 let p = feature.properties;
                 layer.bindPopup(`
-                    <div class='text-sm'>
-                        <b>Lokasi:</b> ${p.lokasi}<br>
-                        <b>Kelas Kesesuaian:</b> ${p.kelas_kesesuaian ?? '-'}<br><br>
-                        <b>Skor Total:</b> ${p.nilai_total ?? '-'}<br>
-                        <b>Ranking VIKOR:</b> ${p.vikor_ranking ?? '-'}<br>
-                        <b>Q-Value:</b> ${p.vikor_q ?? '-'}<br>
+                    <div>
+                        <strong>Lokasi:</strong> ${p.lokasi}<br>
+                        <strong>Kelas:</strong> ${p.kelas_kesesuaian ?? '-'}<br>
+                        <strong>Skor Total:</strong> ${p.nilai_total ?? '-'}<br>
+                        <strong>Ranking VIKOR:</strong> ${p.vikor_ranking ?? '-'}<br>
+                        <strong>Q-Value:</strong> ${p.vikor_q ?? '-'}
                     </div>
                 `);
             }
-        });
+        }).addTo(layerKesesuaian);
 
-        geoLayer.addTo(layerKesesuaian);
         layerKesesuaian.addTo(map);
         document.getElementById('loading').style.display = 'none';
     })
     .catch(err => {
-        console.error('Error loading map:', err);
+        console.error(err);
         document.getElementById('loading').style.display = 'none';
     });
 
-// ================== LAYER CONTROL =====================
-var baseMaps = {
-    "OSM Standard": osm,
-    "Esri Satellite": esriSat,
-    "Stamen Terrain": terrain
-};
+// ========== LAYERS CONTROL ==========
+L.control.layers(
+    {
+        "OSM Standard": osm,
+        "Esri Satellite": esriSat,
+        "Stamen Terrain": terrain
+    },
+    { "Kesesuaian Lahan": layerKesesuaian },
+    { collapsed: false }
+).addTo(map);
 
-var overlayMaps = {
-    "Kesesuaian Lahan": layerKesesuaian
-};
-
-L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
 </script>
 @endsection

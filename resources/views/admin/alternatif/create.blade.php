@@ -1,40 +1,59 @@
 @extends('layouts.app')
 
 @section('content')
-<h1 class="text-xl font-bold mb-4">Input Nilai Alternatif (Grid Mode)</h1>
 
-<form method="POST" action="{{ route('admin.alternatif.nilai.simpan') }}">
-    @csrf
+<ol class="breadcrumb mb-4">
+    <li class="breadcrumb-item"><a href="{{ route('admin.wilayah.index') }}">Daftar Lokasi</a></li>
+    <li class="breadcrumb-item active">Input Nilai Alternatif</li>
+</ol>
 
-    <table class="table-auto w-full bg-white shadow border">
-        <thead>
-            <tr class="bg-gray-200">
-                <th class="p-2 border">Alternatif</th>
-                @foreach($kriteria as $k)
-                    <th class="p-2 border text-center">{{ $k->nama_kriteria }}</th>
-                @endforeach
-            </tr>
-        </thead>
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <strong>Input Nilai Alternatif (Grid Mode)</strong>
+    </div>
 
-        <tbody>
-            @foreach($alternatifs as $alt)
-            <tr>
-                <td class="p-2 border font-semibold">{{ $alt->lokasi }}</td>
+    <div class="card-body">
 
-                @foreach($kriteria as $k)
-                <td class="p-2 border text-center">
-                    <input type="number"
-                           name="nilai[{{ $alt->id }}][{{ $k->id }}]"
-                           value="{{ $existing[$alt->id][$k->id] ?? '' }}"
-                           class="border p-1 w-20 text-center"
-                           min="1" max="5" required>
-                </td>
-                @endforeach
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
+        <form method="POST" action="{{ route('admin.alternatif.nilai.simpan') }}">
+            @csrf
 
-    <button class="bg-blue-600 text-white px-4 py-2 rounded mt-4">Simpan Semua Nilai</button>
-</form>
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped align-middle">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Alternatif</th>
+                            @foreach($kriteria as $k)
+                                <th class="text-center">{{ $k->nama_kriteria }}</th>
+                            @endforeach
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach($alternatifs as $alt)
+                        <tr>
+                            <td class="fw-bold">{{ $alt->lokasi }}</td>
+                            @foreach($kriteria as $k)
+                            <td class="text-center">
+                                <input type="number"
+                                       name="nilai[{{ $alt->id }}][{{ $k->id }}]"
+                                       value="{{ $existing[$alt->id][$k->id] ?? '' }}"
+                                       class="form-control text-center"
+                                       min="1" max="5" required>
+                            </td>
+                            @endforeach
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="btn btn-success mt-3">
+                <i class="fas fa-save"></i> Simpan Semua Nilai
+            </button>
+
+        </form>
+
+    </div>
+</div>
+
 @endsection
