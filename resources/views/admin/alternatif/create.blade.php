@@ -1,18 +1,83 @@
 @extends('layouts.app')
 
 @section('content')
-<h1 class="text-xl font-bold mb-4">Tambah Alternatif Lahan</h1>
 
-<form action="{{ route('admin.alternatif.store') }}" method="POST" enctype="multipart/form-data">
-    @csrf
-    <label>Nama Lokasi</label>
-    <input type="text" name="lokasi" class="border p-2 w-full mb-3" required>
+<ol class="breadcrumb mb-4">
+    <li class="breadcrumb-item"><a href="{{ route('admin.wilayah.index') }}">Daftar Lokasi</a></li>
+    <li class="breadcrumb-item active">Input Nilai Alternatif</li>
+</ol>
 
-    <label>Upload GeoJSON</label>
-    <input type="file" name="geojson" accept=".json,.geojson" class="border p-2 w-full mb-3">
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <strong>Input Nilai Alternatif</strong>
+    </div>
 
-    <button class="bg-blue-600 text-white px-4 py-2 rounded">
-        Simpan Alternatif
-    </button>
-</form>
+    <div class="card-body">
+
+        <form method="POST" action="{{ route('admin.alternatif.nilai.simpan') }}">
+            @csrf
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped align-middle">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Alternatif</th>
+                            @foreach($kriteria as $k)
+                                <th class="text-center">{{ $k->nama_kriteria }}</th>
+                            @endforeach
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach($alternatifs as $alt)
+                        <tr>
+    <td class="fw-bold">{{ $alt->lokasi }}</td>
+
+    @foreach($kriteria as $k)
+    <td class="text-center">
+
+        @php
+            $selected = $existing[$alt->id][$k->id] ?? null;
+
+            $labels = [
+                1 => 'Sangat Buruk',
+                2 => 'Buruk',
+                3 => 'Cukup',
+                4 => 'Baik',
+                5 => 'Sangat Baik'
+            ];
+        @endphp
+
+        <select name="nilai[{{ $alt->id }}][{{ $k->id }}]"
+                class="form-select text-center nilai-select"
+                data-selected="{{ $selected }}">
+            <option value="">Pilih...</option>
+
+            @foreach([1,2,3,4,5] as $n)
+                <option value="{{ $n }}" 
+                    {{ $selected == $n ? 'selected' : '' }}>
+                    {{ $n }} — {{ $labels[$n] }}
+                </option>
+            @endforeach
+        </select>
+
+    </td>
+    @endforeach
+
+</tr>
+
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="btn btn-success mt-3">
+                <i class="fas fa-save"></i> Simpan Semua Nilai
+            </button>
+
+        </form>
+
+    </div>
+</div>
+
 @endsection

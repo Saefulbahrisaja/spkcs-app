@@ -8,14 +8,33 @@
 <body class="bg-gray-100 flex items-center justify-center h-screen">
 
     <div class="bg-white shadow p-8 rounded w-96">
-        <h2 class="text-xl font-bold mb-4 text-center">Login</h2>
 
+        <!-- ===== HEADER LOGO + TITLE ===== -->
+        <div class="text-center mb-6">
+            <img src="{{ asset('storage/logo/banten.png') }}" 
+                 alt="Logo Banten" 
+                 class="mx-auto mb-3"
+                 style="height:70px; width:auto;">
+            
+            <h1 class="text-xl font-bold text-gray-800 leading-tight">
+                Banten-SPABILITY
+            </h1>
+            <p class="text-sm text-gray-600 -mt-1">
+                (System of Paddy Land Suitability)
+            </p>
+        </div>
+
+        <!-- ===== JUDUL LOGIN 
+        <h2 class="text-lg font-bold mb-4 text-center">Login</h2>===== -->
+
+        <!-- ===== ERROR MESSAGE ===== -->
         @if ($errors->any())
             <div class="bg-red-100 text-red-700 p-2 rounded mb-3">
                 {{ $errors->first() }}
             </div>
         @endif
 
+        <!-- ===== FORM LOGIN ===== -->
         <form method="POST" action="{{ url('/login') }}">
             @csrf
 

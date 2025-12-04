@@ -4,17 +4,24 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Kriteria;
+use App\Models\AhpMatrix;
 use Illuminate\Http\Request;
 
 class KriteriaController extends Controller
 {
     public function index()
     {
+        $matrix = AhpMatrix::all();
+        $kriteria = Kriteria::all();
+        $hasil = app(\App\Services\AHPService::class)->hitungBobot();
         return view('admin.kriteria.index', [
-            'kriteria' => Kriteria::all()
+            'kriteria' => Kriteria::all(),
+            'values' => $matrix->groupBy('kriteria_1_id')->map->pluck('nilai_perbandingan','kriteria_2_id'),
+            'hasil' => $hasil
         ]);
-    }
 
+        
+    }
     
 
     public function create()
