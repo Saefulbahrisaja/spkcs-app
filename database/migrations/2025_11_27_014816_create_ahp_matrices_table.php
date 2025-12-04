@@ -11,12 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('ahp_matrices', function (Blueprint $table) {
+         Schema::create('ahp_matrices', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('kriteria_1_id')->constrained('kriterias')->onDelete('cascade');
-            $table->foreignId('kriteria_2_id')->constrained('kriterias')->onDelete('cascade');
-            $table->float('nilai_perbandingan');
+            $table->unsignedBigInteger('expert_id')->index();
+            $table->unsignedBigInteger('kriteria_1_id')->index();
+            $table->unsignedBigInteger('kriteria_2_id')->index();
+            $table->decimal('nilai_perbandingan', 8, 4);
             $table->timestamps();
+
+            $table->foreign('expert_id')->references('id')->on('experts')->onDelete('cascade');
+            // optionally foreign keys to kriteria
         });
     }
 

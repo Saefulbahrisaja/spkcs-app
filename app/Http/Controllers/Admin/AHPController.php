@@ -1,116 +1,81 @@
 <?php
-
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Services\AHPService;
 use App\Models\Kriteria;
+use App\Models\Pakar;
 use App\Models\AhpMatrix;
+use App\Services\AHPService;
 use Illuminate\Http\Request;
 
 class AHPController extends Controller
 {
-    public function formMatrix()
+    /**
+     * LIST PAKAR
+     */
+    public function selectExpert()
     {
+        return view('admin.ahp.select-expert', [
+            'pakar' => Pakar::all()
+        ]);
+    }
+
+    /**
+     * FORM MATRIX PER PAKAR
+     */
+    public function form($expert_id)
+    {
+        $expert = Pakar::findOrFail($expert_id);
         $kriteria = Kriteria::all();
+
         $values = [];
 
         foreach ($kriteria as $k1) {
             foreach ($kriteria as $k2) {
-                $values[$k1->id][$k2->id] = AhpMatrix::where('kriteria_1_id',$k1->id)
-                    ->where('kriteria_2_id',$k2->id)->value('nilai_perbandingan');
+                $values[$k1->id][$k2->id] =
+                    AhpMatrix::where([
+                        'expert_id'     => $expert_id,
+                        'kriteria_1_id' => $k1->id,
+                        'kriteria_2_id' => $k2->id,
+                    ])->value('nilai_perbandingan');
             }
         }
 
-        return view('admin.ahp.matrix', compact('kriteria','values'));
+        return view('admin.ahp.matrix-multipakar', compact(
+            'expert', 'kriteria', 'values'
+        ));
     }
 
-    public function matrixForm()
-{
-    $kriteria = Kriteria::all();
-
-    // Ambil matrix jika ada
-    $matrix = [];
-    foreach (AhpMatrix::all() as $m) {
-        $matrix[$m->kriteria_1_id][$m->kriteria_2_id] = $m->nilai_perbandingan;
-    }
-
-    return view('admin.ahp.matrix', compact('kriteria', 'matrix'));
-}
-
-    public function saveMatrix(Request $r)
+    /**
+     * SIMPAN MATRIX PER PAKAR
+     */
+    public function saveMatrix(Request $r, $expert_id)
     {
-        AhpMatrix::truncate();
+        AhpMatrix::where('expert_id',$expert_id)->delete();
 
         foreach ($r->matrix as $k1 => $cols) {
             foreach ($cols as $k2 => $val) {
-                if ($val != null) {
-                    AhpMatrix::create([
-                        'kriteria_1_id' => $k1,
-                        'kriteria_2_id' => $k2,
-                        'nilai_perbandingan' => $val
-                    ]);
-                }
+                if (!$val) continue;
+
+                AhpMatrix::create([
+                    'expert_id' => $expert_id,
+                    'kriteria_1_id' => $k1,
+                    'kriteria_2_id' => $k2,
+                    'nilai_perbandingan' => $val
+                ]);
             }
         }
 
-        return back()->with('success', 'Matrix berhasil disimpan.');
+        return back()->with('success','Matrix berhasil disimpan.');
     }
 
-
-    public function storeMatrix(Request $request)
+    /**
+     * HITUNG BOBOT HASIL AGREGASI MULTI-PAKAR
+     */
+    public function hitung(AHPService $svc)
     {
-        if (!isset($request->matrix) || !is_array($request->matrix)) {
-            return back()->with('error', 'Matriks tidak ditemukan');
-        }
+        $hasil = $svc->hitungAgregasiMultiPakar();
 
-        foreach ($request->matrix as $k1 => $row) {
-            if (!is_array($row)) {
-                continue;
-            }
-            foreach ($row as $k2 => $val) {
-                // If value is null or empty, set diagonal to 1, otherwise skip saving
-                if ($val === null || $val === '') {
-                    if ($k1 == $k2) {
-                        $val = 1;
-                    } else {
-                        continue;
-                    }
-                }
-
-                // Ensure we store a numeric value
-                if (!is_numeric($val)) {
-                    if ($k1 == $k2) {
-                        $val = 1;
-                    } else {
-                        continue;
-                    }
-                }
-
-                $nilai = (float) $val;
-
-                AhpMatrix::updateOrCreate(
-                    [
-                        'kriteria_1_id' => $k1,
-                        'kriteria_2_id' => $k2
-                    ],
-                    [
-                        'nilai_perbandingan' => $nilai
-                    ]
-                );
-            }
-        }
-
-        return back()->with('success',"Matriks AHP disimpan");
+        return view('admin.ahp.hasil-multipakar', compact('hasil'));
     }
-
-    public function hitungBobot(AHPService $ahp)
-    {
-        $bobot = $ahp->calculateWeights();
-        $konsistensi = $ahp->checkConsistency();
-
-        return view('admin.ahp.hasil', compact('bobot','konsistensi'));
-    }
-
-    
 }

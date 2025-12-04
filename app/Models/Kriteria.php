@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Kriteria extends Model
 {
-    protected $fillable = ['nama_kriteria','tipe','bobot'];
+    protected $fillable = ['nama_kriteria','parent_id','tipe','bobot'];
 
     public function nilai()
     {
@@ -22,5 +22,10 @@ class Kriteria extends Model
     public function matrix2()
     {
         return $this->hasMany(AhpMatrix::class, 'kriteria_2_id');
+    }
+
+        public function sub()
+    {
+        return $this->hasMany(Kriteria::class, 'parent_id');
     }
 }

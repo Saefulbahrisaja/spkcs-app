@@ -50,165 +50,351 @@
             ============================================== -->
             <div class="tab-pane fade show active" id="kriteria" role="tabpanel">
 
-                <table class="table table-bordered table-striped mt-3" id="datatablesSimple">
-                    <thead class="table-secondary">
-                        <tr>
-                            <th>Nama Kriteria</th>
-                            <th>Tipe</th>
-                            <th width="130">Aksi</th>
-                        </tr>
-                    </thead>
+    <div class="accordion" id="accordionKriteria">
 
-                    <tbody>
-                        @foreach($kriteria as $k)
-                        <tr>
-                            <td>{{ $k->nama_kriteria }}</td>
-                            <td>{{ $k->tipe }}</td>
-                            
-                            <td>
-                                <a class="btn btn-warning btn-sm" 
-                                   href="{{ route('admin.kriteria.edit',$k->id) }}">
-                                    Edit
-                                </a>
+        @foreach($kriteria as $k)
+            @if($k->parent_id === null)
 
-                                <form action="{{ route('admin.kriteria.destroy',$k->id) }}" 
-                                      method="POST" class="d-inline">
-                                    @csrf @method('DELETE')
-                                    <button class="btn btn-danger btn-sm" onclick="return confirm('Hapus Kriteria?')">
-                                        Hapus
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
+            <div class="accordion-item mb-2">
+                <h2 class="accordion-header" id="heading{{ $k->id }}">
+                    <button class="accordion-button collapsed" type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#collapse{{ $k->id }}">
+                        <strong>{{ $k->nama_kriteria }}</strong>
+                        <span class="badge bg-secondary ms-2">{{ $k->tipe }}</span>
+                    </button>
+                </h2>
 
-                </table>
+                <div id="collapse{{ $k->id }}" class="accordion-collapse collapse"
+                     data-bs-parent="#accordionKriteria">
+                    
+                    <div class="accordion-body">
 
+                        <!-- AKSI -->
+                        <div class="mb-3">
+                            <a href="{{ route('admin.kriteria.edit',$k->id) }}"
+                               class="btn btn-warning btn-sm">Edit</a>
+
+                            <form action="{{ route('admin.kriteria.destroy',$k->id) }}"
+                                  method="POST" 
+                                  class="d-inline">
+                                @csrf @method('DELETE')
+                                <button class="btn btn-danger btn-sm">
+                                    Hapus
+                                </button>
+                            </form>
+
+                            <button class="btn btn-info btn-sm"
+                                    onclick="openSubForm({{ $k->id }}, '{{ $k->nama_kriteria }}')">
+                                + Sub Kriteria
+                            </button>
+                        </div>
+
+                        <!-- SUB KRITERIA LIST -->
+                        @if($k->sub->count())
+                            <ul class="list-group ms-3">
+                                @foreach($k->sub as $s)
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-angle-right me-2 text-primary"></i>
+                                        {{ $s->nama_kriteria }}
+                                        <span class="badge bg-secondary">{{ $s->tipe }}</span>
+                                    </div>
+
+                                    <div>
+                                        <a href="{{ route('admin.kriteria.edit',$s->id) }}"
+                                           class="btn btn-warning btn-sm">Edit</a>
+
+                                        <form action="{{ route('admin.kriteria.destroy',$s->id) }}"
+                                              class="d-inline"
+                                              method="POST">
+                                            @csrf @method('DELETE')
+                                            <button class="btn btn-danger btn-sm">
+                                                Hapus
+                                            </button>
+                                        </form>
+                                    </div>
+                                </li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="text-muted ms-2">Belum ada sub-kriteria.</p>
+                        @endif
+
+                    </div>
+
+                </div>
             </div>
-            <!-- =============================================
-                     TAB 2 – AHP MATRIX INPUT
-            ============================================== -->
-            <div class="tab-pane fade" id="ahp" role="tabpanel">
 
-    <h5 class="fw-bold mb-3">Matriks Perbandingan Berpasangan (AHP)</h5>
+            @endif
+        @endforeach
 
-    <form method="POST" action="{{ route('admin.ahp.matrix.save') }}">
-        @csrf
+    </div>
 
-        <div class="table-responsive">
-            <table class="table table-bordered align-middle text-center" id="ahpTable">
-                <thead class="table-light">
-                    <tr>
-                        <th>Kriteria</th>
-                        @foreach($kriteria as $k)
-                            <th>{{ $k->nama_kriteria }}</th>
-                        @endforeach
-                    </tr>
-                </thead>
+</div>
+<!-- =============================================
+     TAB 2 – AHP MATRIX INPUT (Combined)
+============================================== -->
+<div class="tab-pane fade" id="ahp" role="tabpanel">
 
-                <tbody>
+    <h4 class="fw-bold mb-3">Matriks Perbandingan AHP (Kriteria & Sub-Kriteria)</h4>
 
-                @foreach($kriteria as $i => $k1)
-                    <tr>
-                        <td class="fw-semibold text-start">{{ $k1->nama_kriteria }}</td>
+    <div class="accordion" id="accordionAHP">
 
-                        @foreach($kriteria as $j => $k2)
-                            <td>
+        <!-- =======================
+             A. KRITERIA UTAMA
+        ======================== -->
+        <div class="accordion-item mb-3">
+            <h2 class="accordion-header" id="headingMainAHP">
+                <button class="accordion-button fw-bold" type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseMainAHP">
+                    Matriks Perbandingan Kriteria Utama
+                </button>
+            </h2>
 
-                                @if($i == $j)
-                                    <span class="fw-bold text-primary">1</span>
+            <div id="collapseMainAHP" class="accordion-collapse collapse show">
 
-                                @elseif($i < $j)
+                <div class="accordion-body">
 
-                                    @php
-                                        $val = $values[$k1->id][$k2->id] ?? null;
-                                    @endphp
+                    <form method="POST" action="{{ route('admin.ahp.matrix.save') }}">
+                        @csrf
 
-                                    <select 
-                                        class="form-select form-select-sm ahp-select"
-                                        data-i="{{ $k1->id }}"
-                                        data-j="{{ $k2->id }}"
-                                        data-selected="{{ $val }}"
-                                    >
-                                        <option value="">Pilih…</option>
+                        <div class="table-responsive">
+                            <table class="table table-bordered text-center align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Kriteria</th>
+                                        @foreach($kriteria as $k)
+                                            @if($k->parent_id === null)
+                                                <th>{{ $k->nama_kriteria }}</th>
+                                            @endif
+                                        @endforeach
+                                    </tr>
+                                </thead>
 
-                                        @foreach([1,2,3,4,5,6,7,8,9] as $num)
-                                            <option value="{{ $num }}"
-                                                {{ $val == $num ? 'selected' : '' }}>
-                                                {{ $num }} –
-                                                @switch($num)
-                                                    @case(1) Sama penting @break
-                                                    @case(2) Antara 1 & 3 @break
-                                                    @case(3) Sedikit lebih penting @break
-                                                    @case(4) Antara 3 & 5 @break
-                                                    @case(5) Lebih penting @break
-                                                    @case(6) Antara 5 & 7 @break
-                                                    @case(7) Jauh lebih penting @break
-                                                    @case(8) Antara 7 & 9 @break
-                                                    @case(9) Sangat-sangat penting @break
-                                                @endswitch
-                                            </option>
+                                <tbody>
+
+                                @php $parents = $kriteria->where("parent_id", null); @endphp
+
+                                @foreach($parents as $i => $k1)
+
+                                    <tr>
+                                        <td class="text-start fw-semibold">{{ $k1->nama_kriteria }}</td>
+
+                                        @foreach($parents as $j => $k2)
+                                            <td>
+                                                @if($i == $j)
+                                                    <span class="fw-bold text-primary">1</span>
+
+                                                @elseif($i < $j)
+
+                                                    @php $val = $values[$k1->id][$k2->id] ?? null; @endphp
+
+                                                    <select class="form-select form-select-sm ahp-select"
+                                                            data-i="{{ $k1->id }}"
+                                                            data-j="{{ $k2->id }}">
+                                                        <option value="">Pilih…</option>
+
+                                                        @foreach(range(1,9) as $num)
+                                                            <option value="{{ $num }}"
+                                                                {{ $val == $num ? 'selected' : '' }}>
+                                                                {{ $num }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+
+                                                    <input type="hidden"
+                                                        name="matrix[{{ $k1->id }}][{{ $k2->id }}]"
+                                                        id="input-{{ $k1->id }}-{{ $k2->id }}"
+                                                        value="{{ $val }}">
+
+                                                @else
+                                                    @php
+                                                        $val = $values[$k2->id][$k1->id] ?? null;
+                                                        $rec = $val ? round(1/$val,4) : '';
+                                                    @endphp
+
+                                                    <input type="text"
+                                                        class="form-control form-control-sm bg-light text-center"
+                                                        readonly
+                                                        id="rec-{{ $k1->id }}-{{ $k2->id }}"
+                                                        value="{{ $rec }}">
+                                                @endif
+                                            </td>
                                         @endforeach
 
-                                    </select>
+                                    </tr>
 
-                                    <input type="hidden"
-                                        name="matrix[{{ $k1->id }}][{{ $k2->id }}]"
-                                        id="input-{{ $k1->id }}-{{ $k2->id }}"
-                                        value="{{ $val }}">
+                                @endforeach
 
-                                @else
-                                    @php
-                                        $val = $values[$k2->id][$k1->id] ?? null;
-                                        $reciprocal = $val ? round(1/$val, 4) : '';
-                                    @endphp
+                                </tbody>
+                            </table>
+                        </div>
 
-                                    <input type="text" readonly
-                                        class="form-control form-control-sm text-center bg-light reciprocal"
-                                        data-i="{{ $k1->id }}"
-                                        data-j="{{ $k2->id }}"
-                                        id="rec-{{ $k1->id }}-{{ $k2->id }}"
-                                        value="{{ $reciprocal }}">
-                                @endif
+                        <button class="btn btn-success mt-2">
+                            <i class="fas fa-save"></i> Simpan Kriteria Utama
+                        </button>
 
-                            </td>
-                        @endforeach
+                    </form>
 
-                    </tr>
+                </div>
 
-                @endforeach
-
-                </tbody>
-            </table>
+            </div>
         </div>
 
-        <button class="btn btn-success mt-3">
-            <i class="fas fa-save"></i> Simpan Matriks AHP
-        </button>
-    </form>
-<hr>
+        <!-- =======================
+             B. SUB-KRITERIA (Per Parent)
+        ======================== -->
+        @foreach($parents as $parent)
+            @if($parent->sub->count() > 1)
+
+            <div class="accordion-item mb-3">
+                <h2 class="accordion-header" id="headingParent{{ $parent->id }}">
+                    <button class="accordion-button collapsed fw-bold" type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#collapseParent{{ $parent->id }}">
+                        Matriks Sub-Kriteria – {{ $parent->nama_kriteria }}
+                    </button>
+                </h2>
+
+                <div id="collapseParent{{ $parent->id }}" class="accordion-collapse collapse">
+                    <div class="accordion-body">
+
+                        <form method="POST" action="{{ route('admin.ahp.submatrix.save') }}">
+                            @csrf
+                            <input type="hidden" name="parent_id" value="{{ $parent->id }}">
+
+                            <div class="table-responsive">
+                                <table class="table table-bordered text-center align-middle">
+                                    <thead class="table-secondary">
+                                        <tr>
+                                            <th>Sub-Kriteria</th>
+                                            @foreach($parent->sub as $s)
+                                                <th>{{ $s->nama_kriteria }}</th>
+                                            @endforeach
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+
+                                    @foreach($parent->sub as $i => $s1)
+
+                                        <tr>
+                                            <td class="text-start fw-semibold">{{ $s1->nama_kriteria }}</td>
+
+                                            @foreach($parent->sub as $j => $s2)
+
+                                                <td>
+
+                                                    @if($i == $j)
+                                                        <span class="fw-bold text-primary">1</span>
+
+                                                    @elseif($i < $j)
+
+                                                        @php
+                                                            $val = $subValues[$parent->id][$s1->id][$s2->id] ?? null;
+                                                        @endphp
+
+                                                        <select class="form-select form-select-sm ahp-sub-select"
+                                                                data-i="{{ $s1->id }}"
+                                                                data-j="{{ $s2->id }}"
+                                                                data-parent="{{ $parent->id }}">
+                                                            <option value="">Pilih…</option>
+
+                                                            @foreach(range(1,9) as $num)
+                                                                <option value="{{ $num }}"
+                                                                    {{ $val == $num ? 'selected' : '' }}>
+                                                                    {{ $num }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+
+                                                        <input type="hidden"
+                                                            name="matrix[{{ $parent->id }}][{{ $s1->id }}][{{ $s2->id }}]"
+                                                            id="sub-{{ $s1->id }}-{{ $s2->id }}-{{ $parent->id }}"
+                                                            value="{{ $val }}">
+
+                                                    @else
+                                                        @php
+                                                            $val = $subValues[$parent->id][$s2->id][$s1->id] ?? null;
+                                                            $rec = $val ? round(1 / $val, 4) : '';
+                                                        @endphp
+
+                                                        <input type="text"
+                                                            class="form-control form-control-sm bg-light text-center"
+                                                            readonly
+                                                            id="sub-rec-{{ $s1->id }}-{{ $s2->id }}-{{ $parent->id }}"
+                                                            value="{{ $rec }}">
+                                                    @endif
+
+                                                </td>
+
+                                            @endforeach
+
+                                        </tr>
+
+                                    @endforeach
+
+                                    </tbody>
+
+                                </table>
+                            </div>
+
+                            <button class="btn btn-primary mt-2">
+                                <i class="fas fa-save"></i> Simpan Sub-Kriteria
+                            </button>
+                        </form>
+
+                    </div>
+                </div>
+
+            </div>
+
+            @endif
+        @endforeach
+
+    </div><!-- end accordion -->
+
 
     <!-- =================== HASIL PERHITUNGAN AHP =================== -->
 
     <h5 class="fw-bold mt-4">Hasil Perhitungan Konsistensi AHP</h5>
 
     <table class="table table-bordered w-50">
+    <tr>
+        <th>λ maks</th>
+        <td>{{ number_format($hasil['kriteria']['lambda_max'], 4) }}</td>
+    </tr>
+    <tr>
+        <th>Consistency Index (CI)</th>
+        <td>{{ number_format($hasil['kriteria']['CI'], 4) }}</td>
+    </tr>
+    <tr>
+        <th>Consistency Ratio (CR)</th>
+        <td>{{ number_format($hasil['kriteria']['CR'], 4) }}</td>
+    </tr>
+</table>
+@foreach($hasil['subkriteria'] as $parentId => $sub)
+    <h5 class="mt-3">Sub-Kriteria dari ID {{ $parentId }}</h5>
+
+    <table class="table table-bordered w-50">
         <tr>
             <th>λ maks</th>
-            <td>{{ number_format($hasil['lambda_max'], 4) }}</td>
+            <td>{{ number_format($sub['lambda_max'], 4) }}</td>
         </tr>
         <tr>
-            <th>Consistency Index (CI)</th>
-            <td>{{ number_format($hasil['CI'], 4) }}</td>
+            <th>CI</th>
+            <td>{{ number_format($sub['CI'], 4) }}</td>
         </tr>
         <tr>
-            <th>Consistency Ratio (CR)</th>
-            <td>{{ number_format($hasil['CR'], 4) }}</td>
+            <th>CR</th>
+            <td>{{ number_format($sub['CR'], 4) }}</td>
         </tr>
     </table>
+@endforeach
 
-    @if($hasil['CR'] <= 0.1)
+   @if($hasil['kriteria']['CR'] <= 0.1)
         <div class="alert alert-success w-50">
             Matriks **Konsisten**  (CR < 0.1)
         </div>
@@ -301,6 +487,65 @@ document.querySelectorAll('.ahp-select').forEach(select => {
     });
 });
 </script>
+<!-- =======================
+     MODAL INPUT SUB-KRITERIA
+========================== -->
+<div class="modal fade" id="subModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+        <form method="POST" action="{{ route('admin.kriteria.store') }}">
+            @csrf
 
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Tambah Sub-Kriteria</h5>
+                <button type="button" class="btn-close" 
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+
+                <input type="text" name="parent_id" id="parent_id">
+                <div class="mb-3">
+                    <label class="form-label">Kriteria Induk</label>
+                    <input type="text" id="parent_name" class="form-control" readonly>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Nama Sub-Kriteria</label>
+                    <input type="text" name="nama_kriteria" class="form-control" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Tipe</label>
+                    <select class="form-select" name="tipe" required>
+                        <option value="benefit">Benefit</option>
+                        <option value="cost">Cost</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                    Batal
+                </button>
+                <button class="btn btn-primary">
+                    Simpan
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+  </div>
+</div>
+<script>
+function openSubForm(id, name) {
+    document.getElementById('parent_id').value = id;
+    document.getElementById('parent_name').value = name;
+
+    let modal = new bootstrap.Modal(document.getElementById('subModal'));
+    modal.show();
+}
+</script>
 
 @endsection
