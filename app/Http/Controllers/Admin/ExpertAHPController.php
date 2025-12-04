@@ -3,93 +3,129 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Expert;
-use App\Models\AhpMatrix;
-use App\Models\Kriteria;
 use Illuminate\Http\Request;
+use App\Models\Expert;
+use App\Models\Kriteria;
+use App\Models\AhpMatrix;
+use App\Services\AHPMultiExpertService;
 
 class ExpertAHPController extends Controller
 {
-    /**
-     * LIST semua pakar & pilih salah satu
-     */
     public function index()
     {
-        return view('admin.expert_ahp.index', [
-            'experts'   => Expert::all(),
-            'kriteria'  => Kriteria::whereNull('parent_id')->get()
-        ]);
+        $experts  = Expert::all();
+        $kriteria = Kriteria::with('sub')->whereNull('parent_id')->get();
+
+        return view('admin.ahp.expert-index', compact('experts','kriteria'));
     }
 
+    public function createExpert(Request $r)
+    {
+        $r->validate(['name' => 'required']);
+
+        Expert::create([
+            'name'   => $r->name,
+            'email'  => $r->email ?? null,
+            'weight' => $r->weight ?? 0
+        ]);
+
+        return back()->with('success','Pakar ditambahkan');
+    }
 
     /**
-     * FORM input AHP untuk PAKAR tertentu
+     * FORM INPUT MATRIX PER PAKAR
      */
-    public function form($expert_id)
+    public function inputMatrixForm($expertId)
     {
-        $expert = Expert::findOrFail($expert_id);
-        $kriteria = Kriteria::whereNull('parent_id')->get();
+        $expert = Expert::findOrFail($expertId);
 
-        // Ambil matrix yang pernah diisi pakar ini
+        // Ambil semua kriteria + sub
+        $all = Kriteria::with('sub')->get();
+
+        // Parent kriteria
+        $parents = $all->whereNull('parent_id')->values();
+
+        // Semua data matrix pakar ini
+        $existing = AhpMatrix::where('expert_id', $expert->id)->get();
+
+        // Build lookup untuk matrix utama
         $values = [];
-        foreach ($kriteria as $k1) {
-            foreach ($kriteria as $k2) {
+        foreach ($existing as $row) {
+            $values[$row->kriteria_1_id][$row->kriteria_2_id] = (float)$row->nilai_perbandingan;
+        }
 
-                $values[$k1->id][$k2->id] =
-                    AhpMatrix::where('expert_id', $expert_id)
-                    ->where('kriteria_1_id', $k1->id)
-                    ->where('kriteria_2_id', $k2->id)
-                    ->value('nilai_perbandingan');
+        // Build sub-matrix per parent
+        $subValues = [];
+        foreach ($parents as $parent) {
+            foreach ($parent->sub as $s1) {
+                foreach ($parent->sub as $s2) {
+                    $subValues[$parent->id][$s1->id][$s2->id] =
+                        $values[$s1->id][$s2->id] ?? null;
+                }
             }
         }
 
-        return view('admin.expert_ahp.form', compact('expert','kriteria','values'));
+        return view('admin.ahp.expert-matrix', [
+            'expert'    => $expert,
+            'kriteria'  => $all,
+            'parents'   => $parents,
+            'existing'  => $existing,
+            'values'    => $values,
+            'subValues' => $subValues
+        ]);
     }
 
-
     /**
-     * SIMPAN MATRIX pairwise comparison untuk PAKAR tertentu
+     * SIMPAN MATRIX PAKAR
      */
-    public function save(Request $request, $expert_id)
+    public function saveExpertMatrix(Request $r, $expertId)
     {
-        if (!$request->matrix) {
-            return back()->with('error', 'Matrix kosong.');
-        }
+        $expert = Expert::findOrFail($expertId);
 
-        // Hapus data lama
-        AhpMatrix::where('expert_id', $expert_id)->delete();
+        $matrix = $r->input('matrix', []);
 
-        foreach ($request->matrix as $k1 => $row) {
-            foreach ($row as $k2 => $val) {
-
+        foreach ($matrix as $k1 => $cols) {
+            foreach ($cols as $k2 => $val) {
                 if ($val === null || $val === '') continue;
 
-                AhpMatrix::create([
-                    'expert_id'      => $expert_id,
-                    'kriteria_1_id'  => $k1,
-                    'kriteria_2_id'  => $k2,
-                    'nilai_perbandingan' => (float)$val
-                ]);
+                AhpMatrix::updateOrCreate(
+                    [
+                        'expert_id'      => $expert->id,
+                        'kriteria_1_id'  => $k1,
+                        'kriteria_2_id'  => $k2
+                    ],
+                    [
+                        'nilai_perbandingan' => (float)$val
+                    ]
+                );
             }
         }
 
-        return back()->with('success', 'Matrix AHP pakar berhasil disimpan.');
+        return back()->with('success','Matrix pakar tersimpan');
     }
 
-
     /**
-     * TAMBAH PAKAR 
+     * AGREGASI + HITUNG BOBOT
      */
-    public function addExpert(Request $r)
+    public function aggregateAndCompute(AHPMultiExpertService $svc)
     {
-        $expert = Expert::create([
-            'name'   => $r->name,
-            'weight' => $r->weight ?? 1
-        ]);
+        $items = Kriteria::whereNull('parent_id')->get();
 
-        return redirect()
-            ->route('expert.ahp.form', $expert->id)
-            ->with('success', 'Pakar ditambahkan.');
+        $res = $svc->aggregateMatricesForItems($items);
 
+        if (!$res)
+            return back()->with('error','Tidak ada pakar atau data.');
+
+        $weightsRes = $svc->computeWeightsFromNumericMatrix($res['matrix']);
+
+        $svc->saveAggregatedToAhpMatrices($res['matrix'], $res['idIndex']);
+
+        // Simpan bobot ke tabel kriteria
+        foreach ($res['idIndex'] as $idx => $id) {
+            $w = $weightsRes['eigenvector'][$idx] ?? 0;
+            Kriteria::where('id', $id)->update(['bobot' => $w]);
+        }
+
+        return back()->with('success','Agregasi & bobot berhasil dihitung');
     }
 }

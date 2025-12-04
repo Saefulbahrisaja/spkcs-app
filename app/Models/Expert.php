@@ -12,6 +12,6 @@ class Expert extends Model
 
     public function matrices()
     {
-        return $this->hasMany(AhpMatrix::class);
+        return $this->hasMany(AhpMatrix::class,'expert_id');
     }
 }

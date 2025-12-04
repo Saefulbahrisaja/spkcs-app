@@ -11,23 +11,25 @@ return new class extends Migration
      */
     public function up(): void
     {
-         Schema::create('ahp_matrices', function (Blueprint $table) {
+        Schema::create('ahp_matrices', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('expert_id')->index();
-            $table->unsignedBigInteger('kriteria_1_id')->index();
-            $table->unsignedBigInteger('kriteria_2_id')->index();
-            $table->decimal('nilai_perbandingan', 8, 4);
+            $table->unsignedBigInteger('expert_id')->nullable(); // AGREGASI atau pakar
+            $table->unsignedBigInteger('kriteria_1_id');
+            $table->unsignedBigInteger('kriteria_2_id');
+            $table->decimal('nilai_perbandingan', 10, 6)->default(1.0);
             $table->timestamps();
 
-            $table->foreign('expert_id')->references('id')->on('experts')->onDelete('cascade');
-            // optionally foreign keys to kriteria
+            $table->unique(['expert_id','kriteria_1_id','kriteria_2_id'], 'ahp_unique_expert_pairs');
+
+            // foreign keys (expert nullable)
+            $table->foreign('expert_id')->references('id')->on('experts')->nullOnDelete();
+            // assume tabel kriterias exists
+            $table->foreign('kriteria_1_id')->references('id')->on('kriterias')->cascadeOnDelete();
+            $table->foreign('kriteria_2_id')->references('id')->on('kriterias')->cascadeOnDelete();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
         Schema::dropIfExists('ahp_matrices');
     }
