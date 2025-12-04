@@ -46,6 +46,8 @@ Route::middleware(['auth', 'role:admin'])
     // AHP MATRIX
     Route::get('kriteria/matrix', [AHPController::class, 'matrixForm'])->name('ahp.matrix');
     Route::post('kriteria/matrix', [AHPController::class, 'saveMatrix'])->name('ahp.matrix.save');
+    Route::post('subkriteria/matrix', [AHPController::class, 'savesubMatrix'])->name('ahp.submatrix.save');
+    
     // AHP HITUNG
     Route::get('ahp/hitung', [AHPController::class, 'hitungBobot'])->name('ahp.hitung');
     // ALTERNATIF
@@ -77,7 +79,11 @@ Route::middleware(['auth', 'role:admin'])
 
     Route::get('/map/export-view', function () {
     return view('laporan.map-export');
+
+    
 });
+
+
 
 
     Route::get('/ringkasan-chart', function () {

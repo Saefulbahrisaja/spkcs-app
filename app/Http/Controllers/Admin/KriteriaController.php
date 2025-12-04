@@ -14,16 +14,27 @@ class KriteriaController extends Controller
         $matrix = AhpMatrix::all();
         $kriteria = Kriteria::all();
         $hasil = app(\App\Services\AHPService::class)->hitungBobot();
+        $subValues = [];
+
+        foreach (Kriteria::whereNull('parent_id')->get() as $parent) {
+            foreach ($parent->sub as $s1) {
+                foreach ($parent->sub as $s2) {
+                    $subValues[$parent->id][$s1->id][$s2->id] =
+                        AhpMatrix::where('kriteria_1_id',$s1->id)
+                                ->where('kriteria_2_id',$s2->id)
+                                ->value('nilai_perbandingan');
+                }
+            }
+        }
+
         return view('admin.kriteria.index', [
             'kriteria' => Kriteria::all(),
             'values' => $matrix->groupBy('kriteria_1_id')->map->pluck('nilai_perbandingan','kriteria_2_id'),
-            'hasil' => $hasil
+            'hasil' => $hasil,
+            'subValues' => $subValues
         ]);
-
-        
     }
     
-
     public function create()
     {
         return view('admin.kriteria.create');
@@ -31,13 +42,12 @@ class KriteriaController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'nama_kriteria' => 'required',
-            'tipe' => 'required'
+            'tipe'          => 'required',
+            'parent_id'     => 'nullable|exists:kriterias,id'
         ]);
-
-        Kriteria::create($request->all());
-
+        Kriteria::create($data);
         return redirect()->route('admin.kriteria.index');
     }
 
