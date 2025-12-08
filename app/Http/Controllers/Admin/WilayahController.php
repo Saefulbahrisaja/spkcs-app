@@ -7,7 +7,6 @@ use App\Models\AlternatifLahan;
 use App\Models\Kriteria;
 use App\Models\NilaiAlternatif;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
 use geoPHP;
 use Shapefile\ShapefileReader;
 use App\Services\ShpAHPService;
@@ -67,56 +66,117 @@ class WilayahController extends Controller
             "HARA"=>4
         ];
 
-        while($rec=$reader->fetchRecord()){
-            if ($rec->isDeleted()) continue;
+        while ($rec = $reader->fetchRecord()) {
 
-            $gj = json_decode($rec->getGeoJSON(),true);
-            $geom = $gj['geometry'];
-            $centroid = $this->centroid($geom);
+    if ($rec->isDeleted()) continue;
 
-            $alt = AlternatifLahan::create([
-                'lokasi'=>$request->lokasi,
-                'geometry_type'=>$geom['type'],
-                'lat'=>$centroid[0],
-                'lng'=>$centroid[1],
-            ]);
+    $raw = $rec->getGeoJSON();
+    $gj  = json_decode($raw, true);
 
-            $newAltIds[] = $alt->id;
+    if (!$gj) continue;
 
-            Storage::disk('public')->put(
-                "geojson/alt_{$alt->id}.geojson",
-                json_encode(["type"=>"FeatureCollection","features"=>[$gj]])
+    //-----------------------------------------------
+    // 1) Normalisasi struktur GeoJSON dari shapefile
+    //-----------------------------------------------
+    $geom  = null;
+    $props = [];
+
+    // CASE A: Feature
+    if (isset($gj['geometry'])) {
+        $geom  = $gj['geometry'];
+        $props = $gj['properties'] ?? [];
+
+    // CASE B: FeatureCollection
+    } elseif (isset($gj['features'][0]['geometry'])) {
+        $geom  = $gj['features'][0]['geometry'];
+        $props = $gj['features'][0]['properties'] ?? [];
+
+    // CASE C: Geometry Only (Polygon/MultiPolygon)
+    } elseif (isset($gj['type']) && in_array($gj['type'], ['Polygon','MultiPolygon','Point'])) {
+        $geom  = $gj;
+        $props = [];
+        $gj = [
+            "type" => "Feature",
+            "geometry" => $geom,
+            "properties" => new \stdClass
+        ];
+
+    } else {
+        \Log::warning("Record tanpa geometry valid: " . substr($raw,0,400));
+        continue;
+    }
+
+
+    // CASE: geometry kosong atau rusak
+    if (!$geom || !isset($geom['type'])) {
+        \Log::warning("Geometry tidak memiliki 'type': " . json_encode($geom));
+        continue;
+    }
+
+    //-----------------------------------------------
+    // 2) Hitung centroid
+    //-----------------------------------------------
+    $centroid = $this->centroid($geom);
+
+
+    //-----------------------------------------------
+    // 3) Buat Alternatif
+    //-----------------------------------------------
+    $alt = AlternatifLahan::create([
+        'lokasi'        => $request->lokasi,
+        'geometry_type' => $geom['type'],
+        'lat'           => $centroid[0],
+        'lng'           => $centroid[1],
+    ]);
+
+    $newAltIds[] = $alt->id;
+
+
+    //-----------------------------------------------
+    // 4) Simpan sebagai GeoJSON SINGLE-FEATURE
+    //-----------------------------------------------
+    Storage::disk('public')->put(
+        "geojson/alt_{$alt->id}.geojson",
+        json_encode([
+            "type" => "FeatureCollection",
+            "features" => [$gj]
+        ])
+    );
+
+
+    //-----------------------------------------------
+    // 5) Mapping atribut SHP ke nilai kriteria
+    //-----------------------------------------------
+    foreach ($map as $field => $kid) {
+        if (isset($props[$field])) {
+            NilaiAlternatif::updateOrCreate(
+                ['alternatif_id'=>$alt->id,'kriteria_id'=>$kid],
+                ['nilai'=>$props[$field]]
             );
-
-            foreach($map as $field=>$kid){
-                if(isset($gj["properties"][$field])){
-                    NilaiAlternatif::updateOrCreate(
-                        ['alternatif_id'=>$alt->id,'kriteria_id'=>$kid],
-                        ['nilai'=>$gj["properties"][$field]]
-                    );
-                }
-            }
-
-            // =========================================
-            // INTERSECTION DENGAN LAYER SUB-KRITERIA
-            // =========================================
-            $layers = $this->loadSubcriteriaLayers();
-
-            foreach ($map as $field => $kid) {
-
-                if (!isset($layers[$field])) continue;
-
-                $value = $this->intersectAndExtractValue($geom, $layers[$field], $field);
-
-                if ($value !== null) {
-                    NilaiAlternatif::updateOrCreate(
-                        ['alternatif_id' => $alt->id, 'kriteria_id' => $kid],
-                        ['nilai_raw' => $value, 'nilai' => $value]
-                    );
-                }
-            }
-
         }
+    }
+
+
+    //-----------------------------------------------
+    // 6) INTERSECTION SUB-KRITERIA
+    //-----------------------------------------------
+    $layers = $this->loadSubcriteriaLayers();
+
+    foreach ($map as $field => $kid) {
+
+        if (!isset($layers[$field])) continue;
+
+        $value = $this->intersectAndExtractValue($geom, $layers[$field], $field);
+
+        if ($value !== null) {
+            NilaiAlternatif::updateOrCreate(
+                ['alternatif_id' => $alt->id, 'kriteria_id' => $kid],
+                ['nilai_raw' => $value, 'nilai' => $value]
+            );
+        }
+    }
+}
+
 
         // ========== 3. Normalisasi AHP (pakai bobot dari SF-AHP hasil expert) ==========
         $scores = $ahp->normalizeAndCompute($newAltIds, $map);
