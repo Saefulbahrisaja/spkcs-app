@@ -32,29 +32,17 @@ class ExpertAHPController extends Controller
         return back()->with('success','Pakar ditambahkan');
     }
 
-    /**
-     * FORM INPUT MATRIX PER PAKAR
-     */
+    
     public function inputMatrixForm($expertId)
     {
         $expert = Expert::findOrFail($expertId);
-
-        // Ambil semua kriteria + sub
         $all = Kriteria::with('sub')->get();
-
-        // Parent kriteria
         $parents = $all->whereNull('parent_id')->values();
-
-        // Semua data matrix pakar ini
         $existing = AhpMatrix::where('expert_id', $expert->id)->get();
-
-        // Build lookup untuk matrix utama
         $values = [];
         foreach ($existing as $row) {
             $values[$row->kriteria_1_id][$row->kriteria_2_id] = (float)$row->nilai_perbandingan;
         }
-
-        // Build sub-matrix per parent
         $subValues = [];
         foreach ($parents as $parent) {
             foreach ($parent->sub as $s1) {
@@ -75,13 +63,9 @@ class ExpertAHPController extends Controller
         ]);
     }
 
-    /**
-     * SIMPAN MATRIX PAKAR
-     */
     public function saveExpertMatrix(Request $r, $expertId)
     {
         $expert = Expert::findOrFail($expertId);
-
         $matrix = $r->input('matrix', []);
 
         foreach ($matrix as $k1 => $cols) {

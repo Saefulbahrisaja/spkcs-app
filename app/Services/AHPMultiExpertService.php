@@ -113,13 +113,20 @@ class AHPMultiExpertService
      */
     public function saveAggregatedToAhpMatrices(array $A, array $idIndex)
     {
-        foreach ($A as $i => $row) {
-            foreach ($row as $j => $val) {
-                $k1 = $idIndex[$i];
-                $k2 = $idIndex[$j];
+        $L = app(SFAHPService::class)->L;
+        foreach ($matrix as $k1 => $cols) {
+            foreach ($cols as $k2 => $ling) {
+                if (!$ling) continue;
+
+                [$mu,$nu,$pi] = $L[$ling];
+
                 AhpMatrix::updateOrCreate(
-                    ['expert_id' => null, 'kriteria_1_id' => $k1, 'kriteria_2_id' => $k2],
-                    ['nilai_perbandingan' => $val]
+                    [
+                        'expert_id'=>$expert->id,
+                        'kriteria_1_id'=>$k1,
+                        'kriteria_2_id'=>$k2,
+                    ],
+                    compact('mu','nu','pi')
                 );
             }
         }

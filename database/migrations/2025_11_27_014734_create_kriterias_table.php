@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('nama_kriteria');
             $table->enum('tipe', ['benefit','cost']);
             $table->float('bobot')->nullable(); // hasil AHP
+             $table->float('bobot_global')->nullable(); // hasil AHP
             $table->timestamps();
         });
     }

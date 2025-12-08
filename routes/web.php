@@ -10,8 +10,8 @@ use App\Http\Controllers\AuthController;
 //use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\KriteriaController;
 use App\Http\Controllers\Admin\AHPController;
+use App\Http\Controllers\Admin\AHPMultiExpertController;
 use App\Http\Controllers\Admin\WilayahController;
-use App\Http\Controllers\Admin\ExpertAHPController;
 use App\Http\Controllers\Admin\VIKORController;
 use App\Http\Controllers\Admin\LaporanController;
 use App\Http\Controllers\Admin\BatasController;
@@ -69,11 +69,13 @@ Route::middleware(['auth', 'role:admin'])
     Route::get('/batas', [BatasController::class, 'index'])->name('batas.index');
     Route::post('/batas', [BatasController::class, 'update'])->name('batas.update');
 //PAKAR AHP MULTI
-    Route::get('/ahp/experts', [ExpertAHPController::class,'index'])->name('ahp.experts');
-    Route::post('/ahp/experts', [ExpertAHPController::class,'createExpert'])->name('ahp.experts.store');
-    Route::get('/ahp/experts/{id}/matrix', [ExpertAHPController::class,'inputMatrixForm'])->name('ahp.experts.matrix');
-    Route::post('/ahp/experts/{id}/matrix', [ExpertAHPController::class,'saveExpertMatrix'])->name('ahp.experts.matrix.save');
-    Route::post('/ahp/aggregate', [ExpertAHPController::class,'aggregateAndCompute'])->name('ahp.aggregate');
+    Route::get('/ahp/experts', [AHPMultiExpertController::class,'index'])->name('ahp.experts');
+    Route::post('/ahp/experts', [AHPMultiExpertController::class,'createExpert'])->name('ahp.experts.store');
+    // FORM INPUT MATRIX PAKAR
+    Route::get('/ahp/experts/{expert}/matrix',[AHPMultiExpertController::class,'inputMatrixForm'])->name('ahp.experts.matrix');
+    Route::post('/ahp/experts/{expert}/matrix',[AHPMultiExpertController::class,'saveExpertMatrix'])->name('ahp.experts.matrix.save');
+   
+    Route::post('/ahp/aggregate', [AHPMultiExpertController::class,'aggregateResult'])->name('ahp.aggregate');
 
     // LAPORAN
     Route::get('/ringkasanluas', [GISController::class, 'ringkasanLuas'])
