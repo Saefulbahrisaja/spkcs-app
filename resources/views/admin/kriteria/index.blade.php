@@ -7,10 +7,8 @@
 </ol>
 
 <div class="card mb-4">
-
     <div class="card-header">
         <a href="{{ route('admin.kriteria.create') }}" class="btn btn-success btn-sm">Tambah Kriteria</a>
-        
     </div>
 
     <div class="card-body">

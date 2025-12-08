@@ -96,62 +96,6 @@
     <script src="{{ asset('assets/demo/chart-bar-demo.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js" crossorigin="anonymous"></script>
     <script src="{{ asset('js/datatables-simple-demo.js') }}"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Semua dropdown input AHP
-            document.querySelectorAll(".ahp-input").forEach(select => {
-                select.addEventListener("change", function () {
-                    let i = this.dataset.i;  // baris
-                    let j = this.dataset.j;  // kolom
-                    let val = this.value;
-                    // Update hidden input submit value
-                    document.getElementById(`input-${i}-${j}`).value = val;
-                    // Hitung reciprocal
-                    let rec = val ? (1 / parseFloat(val)).toFixed(4) : "";
-                    // Cari elemen reciprocal lawan posisi (j,i)
-                    let recInput = document.getElementById(`rec-${j}-${i}`);
-                    if (recInput) {
-                        recInput.value = rec;
-                    }
-                    // Update hidden DB value matrix[j][i]
-                    let hiddenOpposite = document.getElementById(`input-${j}-${i}`);
-                    if (hiddenOpposite) {
-                        hiddenOpposite.value = rec;
-                    }
-                });
-            });
-        });
-    </script>
-    <script>
-        document.querySelectorAll('.nilai-select').forEach(sel => {
-            const colors = {
-                1: '#dc3545',  // merah
-                2: '#fd7e14',  // oranye
-                3: '#ffc107',  // kuning
-                4: '#0d6efd',  // biru
-                5: '#198754'   // hijau
-            };
-
-            function applyColor(select) {
-                let value = select.value;
-                if (colors[value]) {
-                    select.style.background = colors[value];
-                    select.style.color = (value == 3 ? "black" : "white");
-                    select.style.fontWeight = "bold";
-                } else {
-                    select.style.background = 'white';
-                    select.style.color = 'black';
-                }
-            }
-
-            // apply warna saat halaman dibuka
-            applyColor(sel);
-
-            // apply warna ketika user mengganti pilihan
-            sel.addEventListener('change', function() {
-                applyColor(this);
-            });
-        });
-    </script>
+   
 </body>
 </html>

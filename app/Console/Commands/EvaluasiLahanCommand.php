@@ -9,7 +9,6 @@ use App\Models\KlasifikasiLahan;
 use App\Models\PemeringkatanVikor;
 use App\Models\LaporanEvaluasi;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Spatie\Browsershot\Browsershot;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -17,14 +16,14 @@ use Illuminate\Support\Facades\Http;
 class EvaluasiLahanCommand extends Command
 {
     protected $signature = 'evaluasi:lahan';
-    protected $description = 'Hitung AHP, Klasifikasi, dan VIKOR secara otomatis';
+    protected $description = 'Hitung Evaluasi Lahan (SF-AHP → Klasifikasi → VIKOR → PDF → Peta)';
 
     public function handle()
     {
         $this->info("=== MEMULAI PERHITUNGAN EVALUASI LAHAN ===");
 
-        $this->hitungAHP();
-        $this->info("✔ AHP selesai.");
+        $this->ambilBobotSFAHP();
+        $this->info("✔ Bobot SF-AHP di-load.");
 
         $this->hitungSkorTotal();
         $this->info("✔ Skor total alternatif selesai.");
@@ -35,9 +34,6 @@ class EvaluasiLahanCommand extends Command
         $this->hitungVIKOR();
         $this->info("✔ VIKOR selesai.");
 
-        // -----------------------------
-        // SIMPAN LAPORAN
-        // -----------------------------
         $this->simpanLaporan();
         $this->info("✔ Laporan evaluasi berhasil disimpan.");
 
@@ -46,59 +42,24 @@ class EvaluasiLahanCommand extends Command
         return Command::SUCCESS;
     }
 
-    // =================================================================
-    // 1) AHP
-    // =================================================================
-    private function hitungAHP()
+    /* =======================================================
+     * 1. AMBIL BOBOT SF-AHP (BUKAN AHP KLASIK!)
+     * ======================================================= */
+    private function ambilBobotSFAHP()
     {
         $kriteria = Kriteria::all();
-        $n = count($kriteria);
-        if ($n == 0) return;
 
-        $matrix = [];
-        foreach ($kriteria as $i => $ki) {
-            foreach ($kriteria as $j => $kj) {
-
-                if ($i == $j) {
-                    $matrix[$i][$j] = 1;
-                } else {
-                    $pair = DB::table('ahp_matrices')->where([
-                        'kriteria_1_id' => $ki->id,
-                        'kriteria_2_id' => $kj->id
-                    ])->first();
-
-                    $matrix[$i][$j] = $pair ? $pair->nilai_perbandingan : 1;
-                }
+        foreach ($kriteria as $k) {
+            if ($k->bobot === null) {
+                $k->bobot = 1 / count($kriteria);
             }
-        }
-
-        // Normalisasi
-        $colSum = [];
-        for ($j = 0; $j < $n; $j++) {
-            $colSum[$j] = array_sum(array_column($matrix, $j));
-        }
-
-        $norm = [];
-        for ($i = 0; $i < $n; $i++) {
-            for ($j = 0; $j < $n; $j++) {
-                $norm[$i][$j] = $matrix[$i][$j] / $colSum[$j];
-            }
-        }
-
-        $bobot = [];
-        for ($i = 0; $i < $n; $i++) {
-            $bobot[$i] = array_sum($norm[$i]) / $n;
-        }
-
-        foreach ($kriteria as $i => $k) {
-            $k->bobot = $bobot[$i];
             $k->save();
         }
     }
 
-    // =================================================================
-    // 2) Hitung Skor Alternatif
-    // =================================================================
+    /* =======================================================
+     * 2. HITUNG SKOR ALTERNATIF
+     * ======================================================= */
     private function hitungSkorTotal()
     {
         $alternatifs = AlternatifLahan::with('nilai')->get();
@@ -119,9 +80,9 @@ class EvaluasiLahanCommand extends Command
         }
     }
 
-    // =================================================================
-    // 3) Klasifikasi
-    // =================================================================
+    /* =======================================================
+     * 3. KLASIFIKASI LAHAN
+     * ======================================================= */
     private function hitungKlasifikasi()
     {
         $alternatifs = AlternatifLahan::all();
@@ -145,9 +106,9 @@ class EvaluasiLahanCommand extends Command
         }
     }
 
-    // =================================================================
-    // 4) VIKOR
-    // =================================================================
+    /* =======================================================
+     * 4. METODE VIKOR
+     * ======================================================= */
     private function hitungVIKOR()
     {
         $kriteria = Kriteria::all();
@@ -156,7 +117,6 @@ class EvaluasiLahanCommand extends Command
         $S = []; $R = []; $Q = [];
 
         foreach ($alternatifs as $a) {
-
             $sum = 0;
             $max = 0;
 
@@ -175,15 +135,12 @@ class EvaluasiLahanCommand extends Command
             $R[$a->id] = $max;
         }
 
-        $Smin = min($S); 
-        $Smax = max($S);
-        $Rmin = min($R); 
-        $Rmax = max($R);
+        $Smin = min($S);  $Smax = max($S);
+        $Rmin = min($R);  $Rmax = max($R);
 
         $v = 0.5;
 
         foreach ($alternatifs as $a) {
-
             $S_div = ($Smax - $Smin) == 0 ? 0 : ($S[$a->id] - $Smin) / ($Smax - $Smin);
             $R_div = ($Rmax - $Rmin) == 0 ? 0 : ($R[$a->id] - $Rmin) / ($Rmax - $Rmin);
 
@@ -205,75 +162,59 @@ class EvaluasiLahanCommand extends Command
         }
     }
 
-    // =================================================================
-    // 5) SIMPAN LAPORAN
-    // =================================================================
-   private function simpanLaporan()
-{
-    $this->info("📄 Menyimpan laporan evaluasi...");
+    /* =======================================================
+     * 5. SIMPAN LAPORAN (PDF + GEOJSON MAPBOX)
+     * ======================================================= */
+    private function simpanLaporan()
+    {
+        /* === Ambil data klasifikasi & ranking === */
+        $klasifikasi = KlasifikasiLahan::with('alternatif')->get();
+        $ranking = PemeringkatanVikor::with('alternatif')->orderBy('hasil_ranking')->get();
 
-    /* ========================================================
-     * 1. AMBIL DATA KLASIFIKASI & RANKING
-     * ====================================================== */
-    $klasifikasi = KlasifikasiLahan::with('alternatif')->get();
-    $ranking = PemeringkatanVikor::with('alternatif')->orderBy('hasil_ranking')->get();
+        $hasil_klasifikasi = $klasifikasi->map(function($k) {
+            return [
+                'lokasi'      => $k->alternatif->lokasi ?? '-',
+                'nilai_total' => $k->skor_normalisasi,
+                'kelas'       => $k->kelas_kesesuaian
+            ];
+        })->toArray();
 
-    $hasil_klasifikasi = $klasifikasi->map(function($k) {
-        return [
-            'lokasi'      => $k->alternatif->lokasi ?? '-',
-            'nilai_total' => $k->skor_normalisasi,
-            'kelas'       => $k->kelas_kesesuaian
-        ];
-    })->toArray();
+        $hasil_ranking = $ranking->map(function($r) {
+            return [
+                'lokasi'  => $r->alternatif->lokasi ?? '-',
+                'ranking' => $r->hasil_ranking,
+                'q_value' => $r->q_value
+            ];
+        })->toArray();
 
-    $hasil_ranking = $ranking->map(function($r) {
-        return [
-            'lokasi'  => $r->alternatif->lokasi ?? '-',
-            'ranking' => $r->hasil_ranking,
-            'q_value' => $r->q_value
-        ];
-    })->toArray();
+        /* === Generate PDF === */
+        $pdfView = view('admin.laporan.pdf-template', [
+            'klasifikasi' => $hasil_klasifikasi,
+            'ranking'     => $hasil_ranking,
+            'tanggal'     => now()->format('d-m-Y H:i'),
+        ])->render();
 
-    /* ========================================================
-     * 2. GENERATE PDF LAPORAN
-     * ====================================================== */
-    $pdfView = view('admin.laporan.pdf-template', [
-        'klasifikasi' => $hasil_klasifikasi,
-        'ranking'     => $hasil_ranking,
-        'tanggal'     => now()->format('d-m-Y H:i'),
-    ])->render();
+        $pdf = Pdf::loadHTML($pdfView);
 
-    $pdf = Pdf::loadHTML($pdfView);
+        $pdfName = 'laporan_evaluasi_' . time() . '.pdf';
+        Storage::put("public/laporan/{$pdfName}", $pdf->output());
+        $path_pdf = "storage/laporan/{$pdfName}";
 
-    $pdfName = 'laporan_evaluasi_' . time() . '.pdf';
-    Storage::put("public/laporan/{$pdfName}", $pdf->output());
+        /* === Buat GeoJSON === */
+        $alternatifs = AlternatifLahan::with('klasifikasi')->get();
+        $features = [];
 
-    $path_pdf = "storage/laporan/{$pdfName}";
-    $this->info("✔ PDF berhasil dibuat: $path_pdf");
+        foreach ($alternatifs as $a) {
+            if (!$a->geometry) continue;
 
-
-    /* ========================================================
-     * 3. BENTUK GEOJSON UNTUK POLYGON
-     * ====================================================== */
-    $alternatifs = AlternatifLahan::with('klasifikasi')->get();
-    $features = [];
-
-    foreach ($alternatifs as $a) {
-        if (!$a->geometry) {
-            continue;
-        }
-
-        try {
             $geom = json_decode($a->geometry, true);
 
-            // kurangi vertex agar tidak melebihi limit URL
-            if (isset($geom['coordinates'][0]) && is_array($geom['coordinates'][0])) {
+            // compress coords
+            if (isset($geom['coordinates'][0])) {
                 $coords = $geom['coordinates'][0];
-
                 $step = max(1, intval(count($coords) / 50));
-                $coords = array_values(array_filter($coords, fn($v, $i) => $i % $step === 0, ARRAY_FILTER_USE_BOTH));
+                $coords = array_values(array_filter($coords, fn($v,$i) => $i % $step === 0, ARRAY_FILTER_USE_BOTH));
 
-                // pastikan polygon tertutup
                 if ($coords[0] != end($coords)) {
                     $coords[] = $coords[0];
                 }
@@ -288,152 +229,61 @@ class EvaluasiLahanCommand extends Command
                     "kelas" => $a->klasifikasi->kelas_kesesuaian ?? "N"
                 ]
             ];
-        } catch (\Exception $e) {
-            continue;
         }
-    }
 
-    $geojson = json_encode([
-        "type" => "FeatureCollection",
-        "features" => $features
-    ]);
+        $geojson = json_encode([
+            "type" => "FeatureCollection",
+            "features" => $features
+        ]);
 
-    $encoded = $this->encodeGeoJsonForMapbox($geojson);
+        $encoded = $this->encodeGeoJsonForMapbox($geojson);
 
+        /* === Ambil gambar Mapbox === */
+        $token = env('MAPBOX_TOKEN');
 
-    /* ========================================================
-     * 4. AMBIL GAMBAR PETA DARI MAPBOX STATIC API
-     * ====================================================== */
-    $token = env('MAPBOX_TOKEN');
+        $imgName = "peta_eval_" . time() . ".png";
+        $saveDir = storage_path("app/public/laporan");
+        if (!is_dir($saveDir)) mkdir($saveDir, 0777, true);
+        $savePath = "$saveDir/$imgName";
 
-$imgName = "peta_eval_" . time() . ".png";
-$saveDir = storage_path("app/public/laporan");
-if (!is_dir($saveDir)) mkdir($saveDir, 0777, true);
-$savePath = "$saveDir/$imgName";
+        $center = "106.15,-6.3,9";
+        $size   = "1280x900";
 
-$center = "106.15,-6.3,9";
-$size   = "1280x900";
+        $geoSegment = $encoded ? "geojson({$encoded})/" : "";
+        $staticUrl = "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/{$geoSegment}{$center}/{$size}?access_token={$token}";
 
-// build URL - jika $encoded kosong maka kita tidak menambahkan geojson(...)
-$geoSegment = $encoded ? "geojson({$encoded})/" : "";
-$staticUrl = "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/{$geoSegment}{$center}/{$size}?access_token={$token}";
+        $resp = Http::withOptions(['verify'=>false])->get($staticUrl);
 
-$this->info("Mengambil peta: ".\Str::limit($staticUrl, 200) );
-$this->info("URL length: " . strlen($staticUrl));
-
-// fallback ke URL tanpa overlay jika URL terlalu panjang
-if (strlen($staticUrl) > 7800) {
-    $this->warn("URL terlalu panjang untuk Mapbox. Menggunakan peta dasar (tanpa polygon).");
-    $geoSegment = "";
-    $staticUrl = "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/{$center}/{$size}?access_token={$token}";
-}
-
-try {
-    // lakukan HTTP GET
-    $resp = Http::withOptions(['verify' => false])->get($staticUrl);
-
-    $status = $resp->status();
-    $contentType = $resp->header('Content-Type', '');
-
-    $this->info("Mapbox response: HTTP {$status}; Content-Type: {$contentType}");
-
-    if ($status === 200 && str_contains($contentType, 'image/png')) {
-        file_put_contents($savePath, $resp->body());
-        $path_peta = "storage/laporan/{$imgName}";
-        $this->info("✔ Peta berhasil diunduh: {$path_peta}");
-    } else {
-        // simpan body respons ke file debug agar Anda bisa melihat HTML/error JSON
-        $debugName = 'mapbox_debug_' . time() . '.txt';
-        $debugPath = storage_path("app/public/laporan/{$debugName}");
-        file_put_contents($debugPath, "HTTP {$status}\n\n" . $resp->body());
-
-        $this->warn("Mapbox tidak mengembalikan PNG (HTTP {$status}). Debug disimpan: storage/laporan/{$debugName}");
-
-        // coba fallback: peta dasar tanpa overlay
-        $fallbackUrl = "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/{$center}/{$size}?access_token={$token}";
-        $this->info("Mencoba fallback: ".\Str::limit($fallbackUrl,200));
-        $resp2 = Http::withOptions(['verify' => false])->get($fallbackUrl);
-
-        if ($resp2->status() === 200 && str_contains($resp2->header('Content-Type',''), 'image/png')) {
-            file_put_contents($savePath, $resp2->body());
-            $path_peta = "storage/laporan/{$imgName}";
-            $this->info("✔ Fallback peta dasar berhasil diunduh: {$path_peta}");
+        if ($resp->status() === 200 && str_contains($resp->header('Content-Type',''), 'image/png')) {
+            file_put_contents($savePath, $resp->body());
         } else {
-            // fallback gagal juga: buat placeholder PNG berisi pesan error pendek
-            $errSnippet = substr($resp->body(), 0, 800);
-            $msg = "Mapbox failed HTTP {$status}. See debug file: {$debugName}";
-            $this->error($msg);
+            // fallback: peta tanpa overlay
+            $fallback = "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/{$center}/{$size}?access_token={$token}";
+            $resp2 = Http::withOptions(['verify'=>false])->get($fallback);
 
-            // buat placeholder PNG dengan GD berisi pesan singkat
-            $w = 1280; $h = 900;
-            $img = imagecreatetruecolor($w, $h);
-            $bg = imagecolorallocate($img, 255, 255, 255);
-            $red = imagecolorallocate($img, 200, 0, 0);
-            $black = imagecolorallocate($img, 0, 0, 0);
-            imagefill($img, 0, 0, $bg);
-            imagestring($img, 5, 20, 20, "MAPBOX ERROR (HTTP {$status})", $red);
-            imagestring($img, 3, 20, 60, substr($errSnippet, 0, 200), $black);
-            imagepng($img, $savePath);
-            imagedestroy($img);
-
-            $path_peta = "storage/laporan/{$imgName}";
-            $this->warn("Placeholder peta dibuat: {$path_peta}");
+            file_put_contents($savePath, $resp2->body());
         }
-    }
-} catch (\Exception $e) {
-    // tangani error koneksi / exception lain
-    $this->error("Exception saat memanggil Mapbox: " . $e->getMessage());
 
-    // simpan exception ke file debug
-    $dbg = 'mapbox_exception_' . time() . '.txt';
-    file_put_contents(storage_path("app/public/laporan/{$dbg}"), $e->getMessage());
+        $path_peta = "storage/laporan/{$imgName}";
 
-    // buat placeholder PNG berisi pesan exception
-    $w = 1280; $h = 900;
-    $img = imagecreatetruecolor($w, $h);
-    $bg = imagecolorallocate($img, 255, 255, 255);
-    $red = imagecolorallocate($img, 200, 0, 0);
-    imagefill($img, 0, 0, $bg);
-    imagestring($img, 5, 20, 20, "MAPBOX EXCEPTION", $red);
-    imagestring($img, 3, 20, 60, $e->getMessage(), $red);
-    imagepng($img, $savePath);
-    imagedestroy($img);
-
-    $path_peta = "storage/laporan/{$imgName}";
-}
-
-
-    /* ========================================================
-     * 5. SIMPAN KE DATABASE
-     * ====================================================== */
-    LaporanEvaluasi::create([
-        'tanggal'           => now(),
-        'hasil_klasifikasi' => json_encode($hasil_klasifikasi),
-        'hasil_ranking'     => json_encode($hasil_ranking),
-        'path_pdf'          => $path_pdf,
-        'path_peta'         => $path_peta,
-        'status_draft'      => 1
-    ]);
-
-    $this->info("🎉 Laporan lengkap berhasil disimpan.");
-}
-
-/**
- * Encode GeoJSON supaya aman dipakai untuk Mapbox Static API.
- * Menggunakan URL-safe Base64.
- */
-private function encodeGeoJsonForMapbox($geojson)
-{
-    if (!$geojson || $geojson === '{"type":"FeatureCollection","features":[]}') {
-        return "";
+        /* === Simpan Laporan === */
+        LaporanEvaluasi::create([
+            'tanggal'           => now(),
+            'hasil_klasifikasi' => json_encode($hasil_klasifikasi),
+            'hasil_ranking'     => json_encode($hasil_ranking),
+            'path_pdf'          => $path_pdf,
+            'path_peta'         => $path_peta,
+            'status_draft'      => 1
+        ]);
     }
 
-    $base64 = base64_encode($geojson);
+    private function encodeGeoJsonForMapbox($geojson)
+    {
+        if (!$geojson || $geojson === '{"type":"FeatureCollection","features":[]}') {
+            return "";
+        }
 
-    // URL-safe Base64
-    return rtrim(strtr($base64, '+/', '-_'), '=');
-}
-
-
-
+        $base64 = base64_encode($geojson);
+        return rtrim(strtr($base64, '+/', '-_'), '=');
+    }
 }

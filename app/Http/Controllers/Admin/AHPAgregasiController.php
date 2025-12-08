@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers\AHP;
 use App\Http\Controllers\Controller;
-
 use App\Models\AHPMatrix;
 use App\Models\Kriteria;
 use App\Models\Pakar;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AHPAgregasiController extends Controller

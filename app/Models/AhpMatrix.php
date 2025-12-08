@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class AhpMatrix extends Model
 {
-     protected $fillable = ['expert_id','kriteria_1_id','kriteria_2_id','nilai_perbandingan'];
+     protected $fillable = ['expert_id','kriteria_1_id','kriteria_2_id',
+        'mu','nu','pi','nilai_perbandingan'];
 
-    public function expert()
+   public function expert()
     {
-        return $this->belongsTo(Expert::class);
+        return $this->belongsTo(Expert::class,'expert_id');
     }
 
     public function kriteria1() {

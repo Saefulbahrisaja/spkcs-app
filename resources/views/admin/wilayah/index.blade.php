@@ -3,12 +3,12 @@
 @section('content')
 
 <ol class="breadcrumb mb-4">
-    <li class="breadcrumb-item active">Daftar Lokasi & Nilai Alternatif</li>
+    <li class="breadcrumb-item active">Daftar Wilayah & Nilai Alternatif</li>
 </ol>
 
 <div class="card mb-4">
     <div class="card-header">
-        <a href="{{ route('admin.wilayah.create') }}" class="btn btn-success btn-sm">Tambah Lokasi</a>
+        <a href="{{ route('admin.wilayah.create') }}" class="btn btn-success btn-sm">Tambah Wilayah</a>
         <a href="{{ route('admin.alternatif.index') }}" class="btn btn-primary btn-sm">Input Nilai Alternatif</a>
        
     </div>
@@ -21,7 +21,7 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="lokasi-tab" data-bs-toggle="tab" 
                         data-bs-target="#lokasi" type="button" role="tab">
-                    Daftar Lokasi
+                    Daftar Wilayah
                 </button>
             </li>
 

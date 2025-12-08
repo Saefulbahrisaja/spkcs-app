@@ -10,8 +10,8 @@ use App\Http\Controllers\AuthController;
 //use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\KriteriaController;
 use App\Http\Controllers\Admin\AHPController;
+use App\Http\Controllers\Admin\AHPMultiExpertController;
 use App\Http\Controllers\Admin\WilayahController;
-use App\Http\Controllers\Admin\KlasifikasiController;
 use App\Http\Controllers\Admin\VIKORController;
 use App\Http\Controllers\Admin\LaporanController;
 use App\Http\Controllers\Admin\BatasController;
@@ -59,7 +59,6 @@ Route::middleware(['auth', 'role:admin'])
     // KLASIFIKASI LAHAN
     Route::get('/evaluasi/run', function () {
         Artisan::call('evaluasi:lahan');
-
         return back()->with('success', 'Proses Evaluasi lahan berhasil dijalankan!');
     })->name('evaluasi.run');
 
@@ -69,6 +68,14 @@ Route::middleware(['auth', 'role:admin'])
     Route::post('vikor/proses', [VIKORController::class, 'proses'])->name('vikor.proses');
     Route::get('/batas', [BatasController::class, 'index'])->name('batas.index');
     Route::post('/batas', [BatasController::class, 'update'])->name('batas.update');
+//PAKAR AHP MULTI
+    Route::get('/ahp/experts', [AHPMultiExpertController::class,'index'])->name('ahp.experts');
+    Route::post('/ahp/experts', [AHPMultiExpertController::class,'createExpert'])->name('ahp.experts.store');
+    // FORM INPUT MATRIX PAKAR
+    Route::get('/ahp/experts/{expert}/matrix',[AHPMultiExpertController::class,'inputMatrixForm'])->name('ahp.experts.matrix');
+    Route::post('/ahp/experts/{expert}/matrix',[AHPMultiExpertController::class,'saveExpertMatrix'])->name('ahp.experts.matrix.save');
+   
+    Route::post('/ahp/aggregate', [AHPMultiExpertController::class,'aggregateResult'])->name('ahp.aggregate');
 
     // LAPORAN
     Route::get('/ringkasanluas', [GISController::class, 'ringkasanLuas'])
