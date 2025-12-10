@@ -81,8 +81,8 @@
             <div class="tab-pane fade" id="nilai" role="tabpanel">
 
             <div class="table-responsive mt-3">
-                <table class="table table-bordered table-sm text-center">
-                    <thead class="table-light">
+                <table class="table table-bordered table-striped" id="datatablesSimple1">
+                    <thead class="table-secondary">
                         <tr>
                             <th>Wilayah</th>
                             <th>Atribut</th>
@@ -90,7 +90,6 @@
                         </tr>
                     </thead>
                     <tbody>
-
                         @foreach($data as $alt)
                             @foreach($alt->nilai as $n)
                             <tr>
@@ -100,7 +99,6 @@
                             </tr>
                             @endforeach
                         @endforeach
-
                     </tbody>
                 </table>
             </div>
