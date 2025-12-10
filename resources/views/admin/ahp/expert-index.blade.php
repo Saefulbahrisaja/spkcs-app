@@ -35,7 +35,7 @@
     <form action="{{ route('admin.pipeline.run') }}" method="POST">
         @csrf
         <button class="btn btn-success btn-lg fw-bold">
-            🚀 Jalankan Seluruh Evaluasi Lahan (Pipeline)
+            Jalankan Seluruh Evaluasi Lahan (Pipeline)
         </button>
     </form>
 </div>

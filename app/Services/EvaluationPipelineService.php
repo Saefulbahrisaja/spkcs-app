@@ -4,7 +4,7 @@ namespace App\Services;
 use App\Services\SFAHPService;
 use App\Services\ScoringService;
 use App\Services\KlasifikasiService;
-use App\Services\VikorService;
+use App\Services\VIKORService;
 use App\Models\Kriteria;
 use App\Models\LaporanEvaluasi;
 use Illuminate\Support\Carbon;

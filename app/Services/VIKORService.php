@@ -5,7 +5,7 @@ use App\Models\AlternatifLahan;
 use App\Models\Kriteria;
 use App\Models\PemeringkatanVikor;
 
-class VikorService
+class VIKORService
 {
     /**
      * Proses VIKOR dan simpan ranking.
