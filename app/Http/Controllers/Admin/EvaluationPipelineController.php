@@ -12,7 +12,6 @@ class EvaluationPipelineController extends Controller
     {
         try {
             $result = $pipeline->runPipeline();
-
             return redirect()
                 ->back()
                 ->with('success', "Pipeline berhasil diproses! Laporan ID: {$result['laporan_id']}");
