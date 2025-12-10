@@ -260,7 +260,7 @@ button.btn-sm:hover {
 @section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="mb-0">Peta Kesesuaian Lahan — Advanced</h4>
+        <h4 class="mb-0">Peta Kesesuaian Lahan </h4>
         <div class="d-flex gap-2">
             <button id="exportPNG" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-image"></i> Export PNG
