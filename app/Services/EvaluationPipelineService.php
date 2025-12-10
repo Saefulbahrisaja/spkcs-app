@@ -1,63 +1,94 @@
 <?php
 namespace App\Services;
 
-use App\Services\AHPService;
+use App\Services\SFAHPService;
 use App\Services\ScoringService;
 use App\Services\KlasifikasiService;
 use App\Services\VikorService;
+use App\Models\Kriteria;
 use App\Models\LaporanEvaluasi;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class EvaluationPipelineService
 {
-    protected AHPService $ahp;
+    protected SFAHPService $sfahp;
     protected ScoringService $scoring;
-    protected KlasifikasiService $klas;
+    protected KlasifikasiService $klasifikasi;
     protected VikorService $vikor;
 
     public function __construct(
-        AHPService $ahp,
+        SFAHPService $sfahp,
         ScoringService $scoring,
-        KlasifikasiService $klas,
+        KlasifikasiService $klasifikasi,
         VikorService $vikor
     ) {
-        $this->ahp = $ahp;
+        $this->sfahp = $sfahp;
         $this->scoring = $scoring;
-        $this->klas = $klas;
+        $this->klasifikasi = $klasifikasi;
         $this->vikor = $vikor;
     }
 
     /**
-     * Jalankan pipeline lengkap (transaksional pada bagian penyimpanan ringkasan)
+     * JALANKAN PIPELINE LENGKAP (Multi Expert)
      */
     public function runPipeline(): array
     {
-        // 1. AHP -> perbarui bobot kriteria + cek konsistensi
-        $ahpResult = $this->ahp->hitungBobot();
+        DB::beginTransaction();
+        try {
+            /* ==============================================
+             * 1. SF-AHP MULTI EXPERT → Bobot kriteria
+             * ============================================== */
+            $parents = Kriteria::whereNull('parent_id')->get()->values();
+            $parentAgg = $this->sfahp->aggregateAndCompute($parents);
 
-        // 2. Scoring (normalisasi + weighted sum)
-        $this->scoring->hitungSkorAlternatif();
+            $parentWeights = $parentAgg['weights'];
+            $this->sfahp->saveWeightsToKriteria($parents, $parentWeights);
 
-        // 3. Klasifikasi -> update tabel klasifikasi_lahan
-        $klasResult = $this->klas->prosesKlasifikasi();
+            /* SUB-KRITERIA */
+            $global = [];
+            $local = [];
 
-        // 4. VIKOR -> hitung ranking & simpan pemeringkatan_vikor
-        $vikorResult = $this->vikor->prosesVikor();
+            foreach ($parents as $idx => $parent) {
+                $subs = Kriteria::where('parent_id', $parent->id)->get()->values();
 
-        // 5. Simpan ringkasan laporan ke laporan_evaluasi
-        $laporan = LaporanEvaluasi::create([
-            'tanggal' => Carbon::now()->toDateString(),
-            'hasil_klasifikasi' => $klasResult,
-            'hasil_ranking' => $vikorResult,
-            'status_draft' => 'draft'
-        ]);
+                if ($subs->count() > 1) {
+                    $subAgg = $this->sfahp->aggregateAndCompute($subs);
+                    foreach ($subs as $j => $s) {
+                        $local[$s->id]  = $subAgg['weights'][$j];
+                        $global[$s->id] = $subAgg['weights'][$j] * $parentWeights[$idx];
+                    }
+                }
+            }
 
-        return [
-            'ahp' => $ahpResult,
-            'klasifikasi' => $klasResult,
-            'vikor' => $vikorResult,
-            'laporan_id' => $laporan->id
-        ];
+            $this->sfahp->saveSubCriteriaWeights($local, $global);
+
+            $this->scoring->hitungSkorAlternatif();
+
+            $klasResult = $this->klasifikasi->prosesKlasifikasi();
+
+            $vikorResult = $this->vikor->prosesVikor();
+
+            $laporan = LaporanEvaluasi::create([
+                'tanggal'           => Carbon::now(),
+                'hasil_klasifikasi' => json_encode($klasResult),
+                'hasil_ranking'     => json_encode($vikorResult),
+                'status_draft'      => 1
+            ]);
+
+            DB::commit();
+
+            return [
+                'bobot_kriteria' => $parentWeights,
+                'bobot_global_sub' => $global,
+                'klasifikasi' => $klasResult,
+                'ranking' => $vikorResult,
+                'laporan_id' => $laporan->id
+            ];
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 }

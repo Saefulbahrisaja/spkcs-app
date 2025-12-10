@@ -1,87 +1,89 @@
 <?php
-
 namespace App\Services;
 
 use App\Models\AlternatifLahan;
-use App\Models\NilaiAlternatif;
 use App\Models\Kriteria;
 use App\Models\PemeringkatanVikor;
 
-class VIKORService
+class VikorService
 {
-    public function calculateVikor()
+    /**
+     * Proses VIKOR dan simpan ranking.
+     */
+    public function prosesVikor()
     {
-        $kriteria = Kriteria::all();
-        $alternatif = AlternatifLahan::all();
+        $alternatifs = AlternatifLahan::with('nilai')->get();
+        $kriterias = Kriteria::all();
 
-        $S = [];
-        $R = [];
+        $S = [];  // utility measure
+        $R = [];  // regret measure
+        $Q = [];  // compromise measure
 
-        // Step 1: Hitung S dan R
-        foreach ($alternatif as $alt) {
-            $sumWeighted = 0;
+        foreach ($alternatifs as $alt) {
+            $sum = 0;
             $maxRegret = 0;
 
-            foreach ($kriteria as $k) {
+            foreach ($kriterias as $k) {
 
-                $nilai = NilaiAlternatif::where('alternatif_id', $alt->id)
-                    ->where('kriteria_id', $k->id)
-                    ->value('skor') ?? 0;
+                // Bobot global jika ada, kalau tidak pakai bobot biasa
+                $bobot = $k->bobot_global ?: $k->bobot;
 
-                $weighted = $nilai * ($k->bobot ?? 0);
+                $nilai = $alt->nilai->where('kriteria_id', $k->id)->first()->nilai ?? 0;
 
-                $sumWeighted += $weighted;
+                // **Asumsi skala baik 5 — buruk 1**
+                $best = 5;
+                $worst = 1;
 
-                if ($weighted > $maxRegret) {
-                    $maxRegret = $weighted;
-                }
+                // Rumus VIKOR
+                $temp = $bobot * (($best - $nilai) / ($best - $worst));
+
+                $sum += $temp;
+                $maxRegret = max($maxRegret, $temp);
             }
 
-            $S[$alt->id] = $sumWeighted;
+            $S[$alt->id] = $sum;
             $R[$alt->id] = $maxRegret;
         }
 
-        // Step 2: Normalisasi
-        $S_min = min($S);
-        $S_max = max($S);
-        $R_min = min($R);
-        $R_max = max($R);
+        // Normalisasi S dan R
+        $Smin = min($S); $Smax = max($S);
+        $Rmin = min($R); $Rmax = max($R);
 
-        $Q = [];
-        $v = 0.5; // Default parameter VIKOR
+        $v = 0.5; // compromise weight
 
-        foreach ($alternatif as $alt) {
+        foreach ($alternatifs as $alt) {
+            $S_norm = ($Smax - $Smin) == 0 ? 0 : ($S[$alt->id] - $Smin) / ($Smax - $Smin);
+            $R_norm = ($Rmax - $Rmin) == 0 ? 0 : ($R[$alt->id] - $Rmin) / ($Rmax - $Rmin);
 
-            // HANDLE division by zero
-            $S_ratio = ($S_max - $S_min) == 0
-                ? 0
-                : (($S[$alt->id] - $S_min) / ($S_max - $S_min));
-
-            $R_ratio = ($R_max - $R_min) == 0
-                ? 0
-                : (($R[$alt->id] - $R_min) / ($R_max - $R_min));
-
-            $Q[$alt->id] = $v * $S_ratio + (1 - $v) * $R_ratio;
-
-            PemeringkatanVikor::updateOrCreate(
-                ['alternatif_id' => $alt->id],
-                [
-                    'v_value' => $S[$alt->id],
-                    'q_value' => $Q[$alt->id],
-                    'hasil_ranking' => null
-                ]
-            );
+            $Q[$alt->id] = $v * $S_norm + (1 - $v) * $R_norm;
         }
 
-        // Step 3: Ranking berdasarkan Q
-        $sorted = collect($Q)->sort()->toArray();
+        // Urutkan berdasarkan Q naik
+        asort($Q);
+
+        $hasil = [];
         $rank = 1;
 
-        foreach ($sorted as $altId => $score) {
-            PemeringkatanVikor::where('alternatif_id', $altId)
-                ->update(['hasil_ranking' => $rank++]);
+        foreach ($Q as $id => $q) {
+
+            PemeringkatanVikor::updateOrCreate(
+                ['alternatif_id' => $id],
+                [
+                    'v_value'       => $R[$id],
+                    'q_value'       => $q,
+                    'hasil_ranking' => $rank
+                ]
+            );
+
+            $hasil[] = [
+                'alternatif_id' => $id,
+                'ranking' => $rank,
+                'q_value' => $q
+            ];
+
+            $rank++;
         }
 
-        return $sorted;
+        return $hasil;
     }
 }

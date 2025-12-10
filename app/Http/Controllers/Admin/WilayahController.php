@@ -1,218 +1,217 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\AlternatifLahan;
-use App\Models\Kriteria;
 use App\Models\NilaiAlternatif;
+use App\Models\Kriteria;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
-use geoPHP;
 use Shapefile\ShapefileReader;
-use App\Services\ShpAHPService;
+use geoPHP;
+use ZipArchive;
 
 class WilayahController extends Controller
 {
     public function index()
     {
         return view('admin.wilayah.index', [
-            'data'=>AlternatifLahan::all(),
-            'kriteria'=>Kriteria::all(),
-            'nilaiAlternatif'=>NilaiAlternatif::all()->groupBy('alternatif_id'),
+            'data' => AlternatifLahan::all(),
+            'nilaiAlternatif' => NilaiAlternatif::all()->groupBy('alternatif_id'),
         ]);
     }
 
     public function create()
     {
-        return view('admin.wilayah.create');
+        $existingWilayah = AlternatifLahan::with('nilaiDinamis')->get()->map(function($w){
+
+            // Ambil GeoJSON Feature
+            $feature = null;
+            if ($w->geojson_path && Storage::disk('public')->exists($w->geojson_path)) {
+                $json = json_decode(Storage::disk('public')->get($w->geojson_path), true);
+                $feature = $json['features'][0] ?? null;
+            }
+
+            return [
+                'lokasi' => $w->lokasi,
+                'lat'    => $w->lat,
+                'lng'    => $w->lng,
+                'geojson' => $feature, // Feature lengkap (geometry+properties)
+
+                'nilai_dinamis' => $w->nilaiDinamis->map(function($n){
+                    return [
+                        'atribut_nama' => $n->atribut_nama,
+                        'nilai'        => $n->nilai
+                    ];
+                })->toArray()
+            ];
+        });
+
+        return view('admin.wilayah.create', [
+            'existingWilayah' => $existingWilayah
+        ]);
     }
 
-    public function store(Request $request, ShpAHPService $ahp)
+
+    public function store(Request $request)
     {
         $request->validate([
-            'lokasi'=>'required|string',
-            'geo'=>'required|file|max:150000'
+            'lokasi' => 'nullable|string',
+            'geo'    => 'required|file|max:150000',
+            'nilai_storage' => 'required|string',
         ]);
 
-        $file = $request->file('geo');
-        $ext  = strtolower($file->getClientOriginalExtension());
+        $nilaiWilayah = json_decode($request->nilai_storage, true);
+        if (!$nilaiWilayah) return back()->with('error', 'Data wizard tidak valid.');
 
-        if ($ext !== 'zip') {
-            return back()->with('error','Harus ZIP shapefile.');
+        // ==== BACA FILE GEO ====
+        $file = $request->file('geo');
+        $geojsonData = [];
+
+        if (str_ends_with(strtolower($file->getClientOriginalName()), '.zip')) {
+
+            // extract ZIP
+            $zipPath = $file->store("shp_upload", "public");
+            $extractDir = storage_path("app/public/shp_tmp/" . uniqid());
+            mkdir($extractDir, 0777, true);
+
+            $zip = new ZipArchive();
+            $zip->open(storage_path("app/public/" . $zipPath));
+            $zip->extractTo($extractDir);
+            $zip->close();
+
+            $shpFile = $this->findShp($extractDir);
+            if (!$shpFile) return back()->with('error','ZIP tidak berisi SHP lengkap');
+
+            $reader = new ShapefileReader($shpFile);
+
+            while ($rec = $reader->fetchRecord()) {
+                if (!$rec->isDeleted()) {
+                    $geojsonData[] = json_decode($rec->getGeoJSON(), true);
+                }
+            }
+
+        } else {
+            $gj = json_decode(file_get_contents($file->getRealPath()), true);
+            $geojsonData = $gj['features'];
         }
 
-        // ========== 1. extract ZIP ==========
-        $zipPath = $file->store("shp_upload","public");
-        $extractDir = storage_path("app/public/shp_tmp/".uniqid("unz_"));
-        mkdir($extractDir,0777,true);
+        // ==== SIMPAN PER POLYGON ====
+        $savedIDs = [];
 
-        $zip = new \ZipArchive;
-        $zip->open(storage_path("app/public/".$zipPath));
-        $zip->extractTo($extractDir);
-        $zip->close();
+        foreach ($nilaiWilayah as $idx => $wil) {
 
-        $shp = $this->findShp($extractDir);
-        if (!$shp) return back()->with("error","ZIP tidak berisi file .shp");
+            $namaWilayah = $wil['nama'] ?? "Wilayah-$idx";
+            $atributList = $wil['atribut'] ?? [];
+            $rawFeature  = $geojsonData[$idx] ?? null;
 
-        // ========== 2. Baca shapefile ==========
-        $reader = new ShapefileReader($shp);
-        $newAltIds = [];
+            if (!$rawFeature) continue;
 
-        // Mapping atribut → kriteria
-        $map = [
-            "C_ORG"=>1,
-            "LERENG"=>2,
-            "LST"=>3,
-            "HARA"=>4
-        ];
+            $feature = $this->normalizeFeature($rawFeature);
+            $geom    = $feature['geometry'];
 
-        while($rec=$reader->fetchRecord()){
-            if ($rec->isDeleted()) continue;
-
-            $gj = json_decode($rec->getGeoJSON(),true);
-            $geom = $gj['geometry'];
             $centroid = $this->centroid($geom);
 
             $alt = AlternatifLahan::create([
-                'lokasi'=>$request->lokasi,
-                'geometry_type'=>$geom['type'],
-                'lat'=>$centroid[0],
-                'lng'=>$centroid[1],
+                'lokasi'        => $namaWilayah,
+                'geometry_type' => $geom['type'],
+                'lat'           => $centroid[1],
+                'lng'           => $centroid[0],
             ]);
 
-            $newAltIds[] = $alt->id;
+            $savedIDs[] = $alt->id;
 
-            Storage::disk('public')->put(
-                "geojson/alt_{$alt->id}.geojson",
-                json_encode(["type"=>"FeatureCollection","features"=>[$gj]])
-            );
+            // simpan file geojson polygon
+            $path = "geojson/alt_{$alt->id}.geojson";
+            Storage::disk('public')->put($path, json_encode([
+                "type" => "FeatureCollection",
+                "features" => [ $feature ]
+            ]));
 
-            foreach($map as $field=>$kid){
-                if(isset($gj["properties"][$field])){
-                    NilaiAlternatif::updateOrCreate(
-                        ['alternatif_id'=>$alt->id,'kriteria_id'=>$kid],
-                        ['nilai'=>$gj["properties"][$field]]
-                    );
-                }
+            $alt->update(['geojson_path' => $path]);
+
+            // simpan atribut dinamis
+            foreach ($atributList as $a){
+                if (!$a['nama']) continue;
+
+                $kid = Kriteria::where('nama_kriteria', $a['nama'])->value('id');
+                NilaiAlternatif::create([
+                    'alternatif_id' => $alt->id,
+                    'kriteria_id'   => $kid,
+                    'atribut_nama'  => $a['nama'],
+                    'nilai'         => $a['nilai'],
+                ]);
             }
-
-            // =========================================
-            // INTERSECTION DENGAN LAYER SUB-KRITERIA
-            // =========================================
-            $layers = $this->loadSubcriteriaLayers();
-
-            foreach ($map as $field => $kid) {
-
-                if (!isset($layers[$field])) continue;
-
-                $value = $this->intersectAndExtractValue($geom, $layers[$field], $field);
-
-                if ($value !== null) {
-                    NilaiAlternatif::updateOrCreate(
-                        ['alternatif_id' => $alt->id, 'kriteria_id' => $kid],
-                        ['nilai_raw' => $value, 'nilai' => $value]
-                    );
-                }
-            }
-
         }
 
-        // ========== 3. Normalisasi AHP (pakai bobot dari SF-AHP hasil expert) ==========
-        $scores = $ahp->normalizeAndCompute($newAltIds, $map);
-
-        // ========== 4. Klasifikasi Lahan ==========
-        $this->classify($newAltIds);
-
-        return redirect()->route('admin.wilayah.index')
-            ->with("success","Import SHP selesai, skor AHP dihitung, klasifikasi selesai!");
+        return redirect()
+            ->route('admin.wilayah.index')
+            ->with('success', count($savedIDs) . ' wilayah berhasil disimpan!');
     }
+
+    public function destroy($id)
+{
+    $alt = AlternatifLahan::findOrFail($id);
+
+    // Hapus file GeoJSON bila ada
+    if ($alt->geojson_path && Storage::disk('public')->exists($alt->geojson_path)) {
+        Storage::disk('public')->delete($alt->geojson_path);
+    }
+
+    // Hapus nilai atribut dinamis
+    NilaiAlternatif::where('alternatif_id', $id)->delete();
+
+    // Hapus data utama
+    $alt->delete();
+
+    return back()->with('success', 'Wilayah berhasil dihapus beserta file dan atributnya!');
+}
+
+
+
 
     private function findShp($dir)
     {
         $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir));
-        foreach ($it as $f) {
-            if ($f->isFile() && strtolower(substr($f->getFilename(),-4))==='.shp') {
+        foreach ($it as $f){
+            if ($f->isFile() && str_ends_with(strtolower($f->getFilename()), '.shp')){
                 return $f->getPathname();
             }
         }
         return null;
     }
 
+    private function normalizeFeature($item)
+    {
+        if (isset($item['geometry'])) return $item;
+
+        if (isset($item['coordinates'])) {
+            return [
+                "type" => "Feature",
+                "geometry" => $item,
+                "properties" => []
+            ];
+        }
+        return null;
+    }
+
     private function centroid($geom)
     {
-        if ($geom['type']==='Polygon') $poly=$geom['coordinates'][0];
-        else $poly=$geom['coordinates'][0][0];
+        try {
+            $g = geoPHP::load(json_encode($geom), 'json');
+            $c = $g->centroid();
+            return [$c->x(), $c->y()];
+        } catch (\Exception $e) {
 
-        $y = array_sum(array_column($poly,1))/count($poly);
-        $x = array_sum(array_column($poly,0))/count($poly);
-        return [$y,$x];
-    }
+            $coords = ($geom['type'] === 'Polygon')
+                ? $geom['coordinates'][0]
+                : $geom['coordinates'][0][0];
 
-    private function classify($ids)
-    {
-        $b = \App\Models\BatasKesesuaian::first();
-        if (!$b) return;
+            $xs = array_column($coords, 0);
+            $ys = array_column($coords, 1);
 
-        foreach($ids as $id){
-            $alt = AlternatifLahan::find($id);
-            if (!$alt) continue;
-
-            $v = $alt->nilai_total;
-            if ($v >= $b->batas_s1) $kelas='S1';
-            elseif ($v >= $b->batas_s2) $kelas='S2';
-            elseif ($v >= $b->batas_s3) $kelas='S3';
-            else $kelas='N';
-
-            \App\Models\KlasifikasiLahan::updateOrCreate(
-                ['alternatif_id'=>$id],
-                ['skor_normalisasi'=>$v,'kelas_kesesuaian'=>$kelas]
-            );
+            return [ array_sum($xs)/count($xs), array_sum($ys)/count($ys) ];
         }
     }
-
-    private function intersectAndExtractValue(array $geometry, $layerFeatures, string $field)
-    {
-        $poly1 = geoPHP::load(json_encode($geometry), 'json');
-        $values = [];
-        
-        foreach ($layerFeatures as $feat) {
-
-            if (!isset($feat['geometry'])) continue;
-            $poly2 = geoPHP::load(json_encode($feat['geometry']), 'json');
-            
-            $inter = $poly1->intersection($poly2);
-
-            if ($inter && $inter->getArea() > 0) {
-                $val = $feat['properties'][$field] ?? null;
-                if ($val !== null) $values[] = $val;
-            }
-        }
-
-        if (empty($values)) return null;
-
-        return array_sum($values) / count($values); // mean
-    }
-
-    private function loadSubcriteriaLayers(): array
-    {
-        $layers = [];
-
-        $map = [
-            "C_ORG"  => "c_org.geojson",
-            "LERENG" => "lereng.geojson",
-            "LST"    => "lst.geojson",
-            "HARA"   => "hara.geojson",
-        ];
-
-        foreach ($map as $key => $file) {
-            $path = storage_path("app/public/layers/" . $file);
-            if (file_exists($path)) {
-                $layers[$key] = json_decode(file_get_contents($path), true)['features'] ?? [];
-            }
-        }
-
-        return $layers;
-    }
-
 }

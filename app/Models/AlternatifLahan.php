@@ -9,9 +9,6 @@ class AlternatifLahan extends Model
 {
     protected $fillable = [
     'lokasi',
-    'nilai_skor',
-    'nilai_total',
-    'kelas_kesesuaian',
     'geojson_path',
     'lat',
     'lng',
@@ -31,6 +28,12 @@ class AlternatifLahan extends Model
     public function vikor()
     {
         return $this->hasOne(PemeringkatanVikor::class, 'alternatif_id', 'id');
+    }
+
+    public function nilaiDinamis()
+    {
+        return $this->hasMany(NilaiAlternatif::class, 'alternatif_id')
+                    ->whereNull('kriteria_id'); 
     }
 }
 
