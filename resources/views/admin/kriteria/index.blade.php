@@ -507,10 +507,19 @@ document.querySelectorAll('.ahp-select').forEach(select => {
                     <input type="text" id="parent_name" class="form-control" readonly>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Nama Sub-Kriteria</label>
-                    <input type="text" name="nama_kriteria" class="form-control" required>
-                </div>
+                <select name="nama_kriteria" class="form-control" required>
+                    <option value="">-- Pilih Sub Kriteria --</option>
+                    @foreach($subKriteria as $sub)
+                        <option value="{{ $sub }}">{{ $sub }}</option>
+                    @endforeach
+                    <!-- Jika user ingin menambah manual -->
+                    <option value="_custom">+ Tambah Baru</option>
+                </select>
+
+                <input type="text" name="nama_custom" id="nama_custom"
+                    class="form-control mt-2 d-none"
+                    placeholder="Masukkan nama sub kriteria baru">
+
 
                 <div class="mb-3">
                     <label class="form-label">Tipe</label>
@@ -524,7 +533,7 @@ document.querySelectorAll('.ahp-select').forEach(select => {
 
             <div class="modal-footer">
                 <button class="btn btn-secondary" data-bs-dismiss="modal">
-                    Batal
+                    Batal AJ
                 </button>
                 <button class="btn btn-primary">
                     Simpan
@@ -544,6 +553,21 @@ function openSubForm(id, name) {
     let modal = new bootstrap.Modal(document.getElementById('subModal'));
     modal.show();
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const select = document.querySelector('select[name="nama_kriteria"]');
+    const customInput = document.getElementById('nama_custom');
+
+    select.addEventListener('change', () => {
+        if (select.value === "_custom") {
+            customInput.classList.remove('d-none');
+            customInput.setAttribute("required", true);
+        } else {
+            customInput.classList.add('d-none');
+            customInput.removeAttribute("required");
+        }
+    });
+});
 </script>
 
 @endsection

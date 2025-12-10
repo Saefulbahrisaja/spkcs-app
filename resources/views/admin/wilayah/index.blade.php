@@ -9,7 +9,6 @@
 <div class="card mb-4">
     <div class="card-header">
         <a href="{{ route('admin.wilayah.create') }}" class="btn btn-success btn-sm">Tambah Wilayah</a>
-        <a href="{{ route('admin.alternatif.index') }}" class="btn btn-primary btn-sm">Input Nilai Alternatif</a>
        
     </div>
 
@@ -81,71 +80,33 @@
             <!-- ================= TAB 2 : NILAI ALTERNATIF ================= -->
             <div class="tab-pane fade" id="nilai" role="tabpanel">
 
-                <div class="table-responsive mt-3">
-                    <table class="table table-bordered table-sm text-center">
-                        <thead class="table-light">
+            <div class="table-responsive mt-3">
+                <table class="table table-bordered table-sm text-center">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Wilayah</th>
+                            <th>Atribut</th>
+                            <th>Nilai</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        @foreach($data as $alt)
+                            @foreach($alt->nilai as $n)
                             <tr>
-                                <th>Alternatif</th>
-                                @foreach($kriteria as $k)
-                                    <th>{{ $k->nama_kriteria }}</th>
-                                @endforeach
+                                <td>{{ $alt->lokasi }}</td>
+                                <td>{{ $n->atribut_nama }}</td>
+                                <td>{{ $n->nilai }}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($data as $alt)
-                               <tr>
-                                    <td class="fw-semibold text-start">{{ $alt->lokasi }}</td>
-
-                                    @php
-                                        $labels = [
-                                            1 => 'Sangat Buruk',
-                                            2 => 'Buruk',
-                                            3 => 'Cukup',
-                                            4 => 'Baik',
-                                            5 => 'Sangat Baik'
-                                        ];
-
-                                        // warna background
-                                        $colors = [
-                                            1 => '#dc3545', // merah
-                                            2 => '#fd7e14', // oranye
-                                            3 => '#ffc107', // kuning
-                                            4 => '#0d6efd', // biru
-                                            5 => '#198754', // hijau
-                                        ];
-
-                                        $textColors = [
-                                            1 => 'white',
-                                            2 => 'white',
-                                            3 => 'black',
-                                            4 => 'white',
-                                            5 => 'white',
-                                        ];
-                                    @endphp
-
-                                    @foreach($kriteria as $k)
-                                        @php
-                                            $nilaiObj = $alt->nilai->where('kriteria_id', $k->id)->first();
-                                            $v = $nilaiObj->nilai ?? null;
-
-                                            $bg = $v ? $colors[$v] : '#e9ecef';
-                                            $tc = $v ? $textColors[$v] : 'black';
-                                            $label = $v ? $labels[$v] : '-';
-                                        @endphp
-
-                                        <td style="background: {{ $bg }}; color: {{ $tc }}; font-weight:600;">
-                                            {{ $label }}
-                                        </td>
-                                    @endforeach
-
-                                </tr>
-
                             @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                        @endforeach
 
+                    </tbody>
+                </table>
             </div>
+
+        </div>
+
 
         </div><!-- end tab content -->
 

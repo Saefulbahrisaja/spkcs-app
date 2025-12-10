@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class NilaiAlternatif extends Model
 {
     protected $table = 'nilai_alternatifs';
-    protected $fillable = ['alternatif_id','kriteria_id','nilai','skor'];
+    protected $fillable = ['alternatif_id','kriteria_id','nilai','atribut_nama'];
 
     public function alternatif()
     {

@@ -15,15 +15,6 @@
 
     <div class="card-body">
 
-        {{-- Notifikasi --}}
-        @if ($message = Session::get('success'))
-            <div class="alert alert-success">{{ $message }}</div>
-        @endif
-
-        @if ($message = Session::get('error'))
-            <div class="alert alert-danger">{{ $message }}</div>
-        @endif
-
         <form method="POST" action="{{ route('admin.batas.update') }}">
             @csrf
 
@@ -33,7 +24,6 @@
                        class="form-control w-25"
                        value="{{ $batas->batas_s1 }}" required>
             </div>
-
             <div class="mb-3">
                 <label class="form-label fw-semibold">Batas S2 (≥ nilai total)</label>
                 <input type="number" step="0.01" name="batas_s2"

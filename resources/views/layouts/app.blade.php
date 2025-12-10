@@ -11,6 +11,48 @@
     <link href="{{ asset('css/stylesadmin.css') }}" rel="stylesheet" />
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     @yield('styles')
+    <style>
+.tree ul {
+    list-style-type: none;
+    padding-left: 20px;
+}
+
+.tree li {
+    position: relative;
+    padding: 6px 0 6px 20px;
+    cursor: pointer;
+}
+
+.tree li::before {
+    content: "";
+    position: absolute;
+    top: 14px;
+    left: 0;
+    width: 12px;
+    height: 1px;
+    background: #999;
+}
+
+.tree .toggle-icon {
+    cursor: pointer;
+    font-weight: bold;
+    margin-right: 6px;
+    color: #007bff;
+}
+
+.tree .node-label {
+    font-weight: 600;
+}
+
+.children {
+    display: none;
+}
+
+.children.open {
+    display: block;
+}
+</style>
+
 </head>
 <body class="sb-nav-fixed">
     <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">

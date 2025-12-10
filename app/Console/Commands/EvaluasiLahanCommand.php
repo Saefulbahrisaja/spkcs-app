@@ -10,20 +10,20 @@ use App\Models\PemeringkatanVikor;
 use App\Models\LaporanEvaluasi;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use App\Services\SFAHPService;
 
 class EvaluasiLahanCommand extends Command
 {
     protected $signature = 'evaluasi:lahan';
-    protected $description = 'Hitung Evaluasi Lahan (SF-AHP → Klasifikasi → VIKOR → PDF → Peta)';
+    protected $description = 'Hitung Evaluasi Lahan (SF-AHP Multi-Expert → Klasifikasi → VIKOR → PDF → Peta)';
 
     public function handle()
     {
         $this->info("=== MEMULAI PERHITUNGAN EVALUASI LAHAN ===");
 
-        $this->ambilBobotSFAHP();
-        $this->info("✔ Bobot SF-AHP di-load.");
+        $this->ambilBobotSFAHP(); // pakai multi-expert SFAHPService
+        $this->info("✔ Bobot SF-AHP (multi-expert) di-load dan disimpan.");
 
         $this->hitungSkorTotal();
         $this->info("✔ Skor total alternatif selesai.");
@@ -43,17 +43,66 @@ class EvaluasiLahanCommand extends Command
     }
 
     /* =======================================================
-     * 1. AMBIL BOBOT SF-AHP (BUKAN AHP KLASIK!)
+     * 1. AMBIL & SIMPAN BOBOT SF-AHP MULTI-EXPERT
      * ======================================================= */
     private function ambilBobotSFAHP()
     {
-        $kriteria = Kriteria::all();
+        /** @var SFAHPService $svc */
+        $svc = app(SFAHPService::class);
 
-        foreach ($kriteria as $k) {
-            if ($k->bobot === null) {
-                $k->bobot = 1 / count($kriteria);
+        // 1) Kriteria utama (parent)
+        $parents = Kriteria::whereNull('parent_id')->get()->values(); // ensure indexed
+
+        if ($parents->count() > 0) {
+            $aggParents = $svc->aggregateAndCompute($parents);
+
+            // weights array index sesuai order $parents->values()
+            $parentWeights = $aggParents['weights'] ?? [];
+
+            // simpan bobot ke tabel kriteria
+            $svc->saveWeightsToKriteria($parents, $parentWeights);
+        }
+
+        // 2) Sub-kriteria: hitung lokal & global per parent
+        $global = [];
+        $local = [];
+
+        foreach ($parents as $pIndex => $parent) {
+            $subs = Kriteria::where('parent_id', $parent->id)->get()->values();
+            if ($subs->count() < 2) {
+                // kalau tak ada atau hanya 1 sub, set bobot default (jika belum)
+                if ($subs->count() === 1) {
+                    $single = $subs->first();
+                    // set lokal = 1, global = parent weight
+                    $local[$single->id] = 1.0;
+                    $global[$single->id] = $parentWeights[$pIndex] ?? 0;
+                }
+                continue;
             }
-            $k->save();
+
+            $aggSubs = $svc->aggregateAndCompute($subs);
+
+            $subWeights = $aggSubs['weights'] ?? [];
+
+            foreach ($subs as $sIndex => $s) {
+                $local[$s->id] = $subWeights[$sIndex] ?? 0;
+                $global[$s->id] = ($parentWeights[$pIndex] ?? 0) * ($subWeights[$sIndex] ?? 0);
+            }
+        }
+
+        // simpan bobot sub-kriteria (local → bobot, global → bobot_global)
+        $svc->saveSubCriteriaWeights($local, $global);
+
+        // Safety fallback: pastikan semua kriteria punya bobot minimal
+        foreach (Kriteria::all() as $k) {
+            if (is_null($k->bobot)) {
+                $k->bobot = 0;
+                $k->save();
+            }
+            if (is_null($k->bobot_global)) {
+                $k->bobot_global = $k->bobot;
+                $k->save();
+            }
         }
     }
 
@@ -63,6 +112,9 @@ class EvaluasiLahanCommand extends Command
     private function hitungSkorTotal()
     {
         $alternatifs = AlternatifLahan::with('nilai')->get();
+        // gunakan bobot_global untuk agregasi jika sub-kriteria digunakan,
+        // namun jika Anda sebelumnya menyimpan bobot ke 'bobot' kolom, gunakan itu.
+        // Saya pakai bobot_global jika tersedia, fallback ke bobot.
         $kriteria = Kriteria::all();
 
         foreach ($alternatifs as $alt) {
@@ -71,11 +123,12 @@ class EvaluasiLahanCommand extends Command
             foreach ($kriteria as $k) {
                 $nilaiAlt = $alt->nilai->where('kriteria_id', $k->id)->first();
                 if ($nilaiAlt) {
-                    $total += $nilaiAlt->nilai * $k->bobot;
+                    $bobotDipakai = $k->bobot_global ?? $k->bobot ?? 0;
+                    $total += ($nilaiAlt->nilai ?? 0) * $bobotDipakai;
                 }
             }
 
-            $alt->nilai_total = $total;
+            //$alt->nilai_total = $total;
             $alt->save();
         }
     }
@@ -89,11 +142,11 @@ class EvaluasiLahanCommand extends Command
         $batas = \App\Models\BatasKesesuaian::first();
 
         foreach ($alternatifs as $a) {
-            $skor = $a->nilai_total;
+            $skor = $a->nilai_total ?? 0;
 
-            if ($skor >= $batas->batas_s1) $kelas = 'S1';
-            elseif ($skor >= $batas->batas_s2) $kelas = 'S2';
-            elseif ($skor >= $batas->batas_s3) $kelas = 'S3';
+            if ($skor >= ($batas->batas_s1 ?? PHP_INT_MAX)) $kelas = 'S1';
+            elseif ($skor >= ($batas->batas_s2 ?? PHP_INT_MAX)) $kelas = 'S2';
+            elseif ($skor >= ($batas->batas_s3 ?? PHP_INT_MAX)) $kelas = 'S3';
             else $kelas = 'N';
 
             KlasifikasiLahan::updateOrCreate(
@@ -123,10 +176,13 @@ class EvaluasiLahanCommand extends Command
             foreach ($kriteria as $k) {
                 $nilai = $a->nilai->where('kriteria_id', $k->id)->first()->nilai ?? 0;
 
+                // Anda bisa sesuaikan best/worst per kriteria, di sini dipakai contoh 5/1
                 $best = 5;
                 $worst = 1;
 
-                $temp = $k->bobot * (($best - $nilai) / ($best - $worst));
+                $bobotDipakai = $k->bobot_global ?? $k->bobot ?? 0;
+
+                $temp = $bobotDipakai * (($best - $nilai) / max(1e-12, ($best - $worst)));
                 $sum += $temp;
                 if ($temp > $max) $max = $temp;
             }
@@ -134,6 +190,8 @@ class EvaluasiLahanCommand extends Command
             $S[$a->id] = $sum;
             $R[$a->id] = $max;
         }
+
+        if (empty($S) || empty($R)) return;
 
         $Smin = min($S);  $Smax = max($S);
         $Rmin = min($R);  $Rmax = max($R);
@@ -154,7 +212,7 @@ class EvaluasiLahanCommand extends Command
             PemeringkatanVikor::updateOrCreate(
                 ['alternatif_id' => $altId],
                 [
-                    'v_value'       => $R[$altId],
+                    'v_value'       => $R[$altId] ?? 0,
                     'q_value'       => $q,
                     'hasil_ranking' => $ranking++
                 ]
@@ -170,7 +228,6 @@ class EvaluasiLahanCommand extends Command
         /* === Ambil data klasifikasi & ranking === */
         $klasifikasi = KlasifikasiLahan::with('alternatif')->get();
         $ranking = PemeringkatanVikor::with('alternatif')->orderBy('hasil_ranking')->get();
-
         $hasil_klasifikasi = $klasifikasi->map(function($k) {
             return [
                 'lokasi'      => $k->alternatif->lokasi ?? '-',

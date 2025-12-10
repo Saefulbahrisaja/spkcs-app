@@ -6,6 +6,7 @@ use App\Models\AlternatifLahan;
 use App\Models\NilaiAlternatif;
 use App\Models\Kriteria;
 use App\Models\KlasifikasiLahan;
+use App\Models\BatasKesesuaian;
 
 class NormalisasiService
 {
@@ -13,6 +14,14 @@ class NormalisasiService
     {
         $kriteria = Kriteria::all();
         $alternatif = AlternatifLahan::all();
+        // batas kesesuaian
+        $bk = BatasKesesuaian::first();
+        $batas = [
+            'S1' => $bk->batas_s1 ?? 0.75,
+            'S2' => $bk->batas_s2 ?? 0.50,
+            'S3' => $bk->batas_s3 ?? 0.25,
+        ];
+
 
         // Ambil nilai mentah per kriteria
         $nilaiKriteria = [];
@@ -57,7 +66,7 @@ class NormalisasiService
             }
 
             // Tentukan kelas S1,S2,S3,N
-            $kelas = $this->tentukanKelas($totalSkor);
+            $kelas = $this->tentukanKelas($totalSkor, $batas);
 
             // Simpan ke tabel klasifikasi
             KlasifikasiLahan::updateOrCreate(
@@ -68,7 +77,7 @@ class NormalisasiService
                 ]
             );
 
-            // Update tabel alternatif
+            ///Update tabel alternatif
             $alt->update([
                 'nilai_total' => $totalSkor,
                 'kelas_kesesuaian' => $kelas
@@ -79,11 +88,11 @@ class NormalisasiService
     }
 
 
-    private function tentukanKelas($skor)
+    private function tentukanKelas($skor, $b)
     {
-        if ($skor >= 0.75) return 'S1'; // Sangat sesuai
-        if ($skor >= 0.50) return 'S2'; // Cukup sesuai
-        if ($skor >= 0.25) return 'S3'; // Marginal
-        return 'N'; // Tidak sesuai
+        if ($skor >= $b['S1']) return 'S1';
+        if ($skor >= $b['S2']) return 'S2';
+        if ($skor >= $b['S3']) return 'S3';
+        return 'N';
     }
 }

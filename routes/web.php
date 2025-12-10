@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\LaporanController;
 use App\Http\Controllers\Admin\BatasController;
 use App\Http\Controllers\AlternatifController;
 use App\Http\Controllers\LaporanEvaluasiController;
+use App\Http\Controllers\Admin\EvaluationPipelineController;
 
 use Illuminate\Support\Facades\Artisan;
 //use App\Http\Controllers\Admin\ThresholdController;
@@ -41,15 +42,8 @@ Route::middleware(['auth', 'role:admin'])
     ->group(function() {
 
     Route::get('/', fn() => view('admin.dashboard'))->name('dashboard');
-    //Route::resource('users', UserController::class);
     Route::resource('kriteria', KriteriaController::class)->except(['show']);
-    // AHP MATRIX
-    Route::get('kriteria/matrix', [AHPController::class, 'matrixForm'])->name('ahp.matrix');
-    Route::post('kriteria/matrix', [AHPController::class, 'saveMatrix'])->name('ahp.matrix.save');
-    Route::post('subkriteria/matrix', [AHPController::class, 'savesubMatrix'])->name('ahp.submatrix.save');
     
-    // AHP HITUNG
-    Route::get('ahp/hitung', [AHPController::class, 'hitungBobot'])->name('ahp.hitung');
     // ALTERNATIF
     Route::get('/alternatif/nilai', [AlternatifController::class, 'formNilai'])->name('alternatif.index');
     Route::post('/alternatif/nilai', [AlternatifController::class, 'simpanNilai'])->name('alternatif.nilai.simpan');
@@ -68,15 +62,20 @@ Route::middleware(['auth', 'role:admin'])
     Route::post('vikor/proses', [VIKORController::class, 'proses'])->name('vikor.proses');
     Route::get('/batas', [BatasController::class, 'index'])->name('batas.index');
     Route::post('/batas', [BatasController::class, 'update'])->name('batas.update');
-//PAKAR AHP MULTI
+    
+    //PAKAR AHP MULTI
     Route::get('/ahp/experts', [AHPMultiExpertController::class,'index'])->name('ahp.experts');
     Route::post('/ahp/experts', [AHPMultiExpertController::class,'createExpert'])->name('ahp.experts.store');
     // FORM INPUT MATRIX PAKAR
     Route::get('/ahp/experts/{expert}/matrix',[AHPMultiExpertController::class,'inputMatrixForm'])->name('ahp.experts.matrix');
     Route::post('/ahp/experts/{expert}/matrix',[AHPMultiExpertController::class,'saveExpertMatrix'])->name('ahp.experts.matrix.save');
-   
+    Route::put('/ahp/experts/{expert}', [AHPMultiExpertController::class,'updateExpert'])->name('ahp.experts.update');
+    Route::delete('/ahp/experts/{expert}', [AHPMultiExpertController::class,'deleteExpert'])->name('ahp.experts.destroy');
     Route::post('/ahp/aggregate', [AHPMultiExpertController::class,'aggregateResult'])->name('ahp.aggregate');
 
+
+Route::post('/pipeline/run', [EvaluationPipelineController::class, 'run'])
+    ->name('pipeline.run');
     // LAPORAN
     Route::get('/ringkasanluas', [GISController::class, 'ringkasanLuas'])
      ->name('ringkasan.luas');
@@ -97,9 +96,6 @@ Route::middleware(['auth', 'role:admin'])
         return view('gis.ringkasan-chart');
     })->name('ringkasan.chart');
 
-
-    Route::post('/evaluation/run', [\App\Http\Controllers\EvaluationController::class, 'run'])
-    ->middleware('auth');
 
 });
 
@@ -135,7 +131,7 @@ Route::get('/map/geojson', [GISController::class, 'geojson'])->name('map.geojson
 Route::get('/peta', function() {
     return view('gis.index');
 });
-
+Route::get('/map/atribut', [GISController::class, 'atribut'])->name('map.atribut');
 
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 Route::get('/export-pdf', [DashboardController::class, 'exportPDF'])
