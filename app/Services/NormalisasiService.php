@@ -22,7 +22,6 @@ class NormalisasiService
             'S3' => $bk->batas_s3 ?? 0.25,
         ];
 
-
         // Ambil nilai mentah per kriteria
         $nilaiKriteria = [];
         foreach ($kriteria as $k) {
