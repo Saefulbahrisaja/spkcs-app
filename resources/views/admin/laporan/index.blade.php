@@ -83,8 +83,7 @@
                     <td colspan="7" class="text-center text-muted py-4">
                         Belum ada laporan evaluasi.
                         <br>
-                        <small>Jalankan <code> <a href="{{ route('admin.evaluasi.run') }}"class="btn btn-primary btn-sm"><i class="fas fa-play-circle"></i> Evaluasi Lahan</a></code> untuk membuat laporan baru.</small>
-                    </td>
+                                 </td>
                 </tr>
                 @endforelse
             </tbody>

@@ -95,7 +95,7 @@
                             <tr>
                                 <td>{{ $alt->lokasi }}</td>
                                 <td>{{ $n->atribut_nama }}</td>
-                                <td>{{ $n->nilai }}</td>
+                                <td>{{ $n->nilai_input }}</td>
                             </tr>
                             @endforeach
                         @endforeach

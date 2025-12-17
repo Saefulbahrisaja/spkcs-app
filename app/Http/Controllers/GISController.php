@@ -2,98 +2,48 @@
 namespace App\Http\Controllers;
 
 use App\Models\AlternatifLahan;
+use App\Models\NilaiAlternatif;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class GISController extends Controller
 {
-    /* ============================================================
-       GEOJSON UTAMA — mendukung multi atribut + kelas sekaligus
-    ============================================================ */
-    public function geojson(Request $req)
+    /**
+     * Generate GeoJSON dengan multi atribut dan kelas
+     */
+    public function geojson(Request $request)
     {
         $alternatifs = AlternatifLahan::with(['klasifikasi', 'vikor', 'nilai'])->get();
         $features = [];
 
-        foreach ($alternatifs as $a) {
-
-            /* ============================================================
-                1. GEOMETRY
-            ============================================================ */
-            $geom = null;
-
-            if ($a->geojson_path && Storage::disk('public')->exists($a->geojson_path)) {
-                $file = Storage::disk('public')->get($a->geojson_path);
-                $gj   = json_decode($file, true);
-
-                if (($gj['type'] ?? null) === 'FeatureCollection') {
-                    $geom = $gj['features'][0]['geometry'] ?? null;
-                } else {
-                    $geom = $gj['geometry'] ?? null;
-                }
-            }
-            elseif ($a->lat && $a->lng) {
-                $geom = [
-                    "type" => "Point",
-                    "coordinates" => [floatval($a->lng), floatval($a->lat)]
-                ];
+        foreach ($alternatifs as $alternatif) {
+            // 1. GEOMETRY
+            $geometry = $this->getGeometry($alternatif);
+            if (!$geometry) {
+                continue;
             }
 
-            if (!$geom) continue;
+            // 2. BASE PROPERTIES
+            $baseProperties = $this->getBaseProperties($alternatif);
 
-            /* ============================================================
-                2. BASE PROPERTIES (kelas + info umum)
-            ============================================================ */
-            $baseProps = [
-                'alternatif_id'     => $a->id,
-                'lokasi'            => $a->lokasi,
-                'nilai_total'       => $a->nilai_total,
-                'kelas_kesesuaian'  => optional($a->klasifikasi)->kelas_kesesuaian,
-                'skor_normalisasi'  => optional($a->klasifikasi)->skor_normalisasi,
-                'vikor_ranking'     => optional($a->vikor)->hasil_ranking,
-                'vikor_q'           => optional($a->vikor)->q_value,
-                'vikor_v'           => optional($a->vikor)->v_value,
-            ];
-
-            /* ============================================================
-                2B. TAMBAHKAN SEMUA ATRIBUT (untuk mode kelas & detail panel)
-            ============================================================ */
-            $allAttrs = [];
-            foreach ($a->nilai as $n) {
-                $allAttrs[$n->atribut_nama] = $n->nilai;
-                //$allAttrs[$n->atribut_nama . '_id'] = $n->kriteria_id;
+            // 2B. TAMBAHKAN SEMUA ATRIBUT
+            foreach ($alternatif->nilai as $nilai) {
+                $baseProperties[$nilai->atribut_nama] = $nilai->nilai_input;
             }
 
-            // merge → semua atribut masuk ke properties
-            $baseProps = array_merge($baseProps, $allAttrs);
-
-            /* ============================================================
-                3. FEATURE MODE KELAS (1 per wilayah)
-            ============================================================ */
-            $classFeature = [
+            // 3. FEATURE MODE KELAS
+            $features[] = [
                 'type'       => 'Feature',
-                'geometry'   => $geom,
-                'properties' => array_merge($baseProps, [
-                    'mode' => 'kelas'
-                ])
+                'geometry'   => $geometry,
+                'properties' => array_merge($baseProperties, ['mode' => 'kelas'])
             ];
-            $features[] = $classFeature;
 
-            /* ============================================================
-                4. FEATURE MODE ATRIBUT (1 per atribut per wilayah)
-            ============================================================ */
-            foreach ($a->nilai as $attr) {
-                $properties = array_merge($baseProps, [
-                    'mode'        => 'atribut',
-                    'atribut'     => $attr->atribut_nama,
-                    'nilai'       => $attr->nilai,
-                    'kriteria_id' => $attr->kriteria_id,
-                ]);
-
+            // 4. FEATURE MODE ATRIBUT
+            foreach ($alternatif->nilai as $nilai) {
                 $features[] = [
                     'type'       => 'Feature',
-                    'geometry'   => $geom,
-                    'properties' => $properties
+                    'geometry'   => $geometry,
+                    'properties' => $baseProperties
                 ];
             }
         }
@@ -104,46 +54,82 @@ class GISController extends Controller
         ]);
     }
 
+    /**
+     * Ambil geometry dari alternatif
+     */
+    private function getGeometry($alternatif)
+    {
+        if ($alternatif->geojson_path && Storage::disk('public')->exists($alternatif->geojson_path)) {
+            $file = Storage::disk('public')->get($alternatif->geojson_path);
+            $geojson = json_decode($file, true);
 
-    /* ============================================================
-        LIST ATRIBUT DINAMIS
-    ============================================================ */
+            if (($geojson['type'] ?? null) === 'FeatureCollection') {
+                return $geojson['features'][0]['geometry'] ?? null;
+            }
+            return $geojson['geometry'] ?? null;
+        }
+
+        if ($alternatif->lat && $alternatif->lng) {
+            return [
+                'type'        => 'Point',
+                'coordinates' => [floatval($alternatif->lng), floatval($alternatif->lat)]
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Ambil base properties dari alternatif
+     */
+    private function getBaseProperties($alternatif)
+    {
+        return [
+            'alternatif_id'     => $alternatif->id,
+            'lokasi'            => $alternatif->lokasi,
+            'nilai_total'       => $alternatif->nilai_total,
+            'kelas_kesesuaian'  => optional($alternatif->klasifikasi)->kelas_kesesuaian,
+            'skor_normalisasi'  => optional($alternatif->klasifikasi)->skor_normalisasi,
+            'vikor_ranking'     => optional($alternatif->vikor)->hasil_ranking,
+            'vikor_q'           => optional($alternatif->vikor)->q_value,
+            'vikor_v'           => optional($alternatif->vikor)->v_value,
+        ];
+    }
+
+    /**
+     * List atribut dinamis
+     */
     public function atribut()
     {
-        return \App\Models\NilaiAlternatif::select('atribut_nama')
+        return NilaiAlternatif::select('atribut_nama')
             ->distinct()
             ->orderBy('atribut_nama')
             ->pluck('atribut_nama');
     }
 
-
-    /* ============================================================
-        RINGKASAN LUAS PER KELAS
-    ============================================================ */
+    /**
+     * Ringkasan luas per kelas
+     */
     public function ringkasanLuas()
     {
         $alternatifs = AlternatifLahan::with(['klasifikasi'])->get();
+        $result = ['S1' => [], 'S2' => [], 'S3' => [], 'N' => []];
 
-        $result = [
-            'S1' => [],
-            'S2' => [],
-            'S3' => [],
-            'N'  => []
-        ];
-
-        foreach ($alternatifs as $alt) {
-
-            $path = $alt->geojson_path;
-            if (!$path || !Storage::disk('public')->exists($path)) continue;
+        foreach ($alternatifs as $alternatif) {
+            $path = $alternatif->geojson_path;
+            if (!$path || !Storage::disk('public')->exists($path)) {
+                continue;
+            }
 
             $content = Storage::disk('public')->get($path);
             $geojson = json_decode($content, true);
-            if (!$geojson) continue;
+            if (!$geojson) {
+                continue;
+            }
 
             $luas = $this->hitungLuasGeoJSON($geojson);
-
-            $kelas = optional($alt->klasifikasi)->kelas_kesesuaian ?? 'N';
-            $lokasi = $alt->lokasi;
+            $kelas = optional($alternatif->klasifikasi)->kelas_kesesuaian ?? 'N';
+            $lokasi = $alternatif->lokasi;
 
             if (!isset($result[$kelas][$lokasi])) {
                 $result[$kelas][$lokasi] = 0;
@@ -154,17 +140,17 @@ class GISController extends Controller
         return response()->json($result);
     }
 
-
-    /* ============================================================
-        HITUNG LUAS GEOJSON
-    ============================================================ */
-
+    /**
+     * Hitung luas GeoJSON
+     */
     private function hitungLuasGeoJSON($geojson)
     {
         if (($geojson['type'] ?? '') === 'FeatureCollection') {
             $total = 0;
             foreach ($geojson['features'] as $feature) {
-                if (!isset($feature['geometry'])) continue;
+                if (!isset($feature['geometry'])) {
+                    continue;
+                }
                 $total += $this->hitungLuasGeoJSON($feature['geometry']);
             }
             return $total;
@@ -185,33 +171,37 @@ class GISController extends Controller
         return 0;
     }
 
-
-    private function luasPolygon($coords)
+    /**
+     * Hitung luas polygon
+     */
+    private function luasPolygon($coordinates)
     {
-        $points = $coords[0];
+        $points = $coordinates[0];
         $first = $points[0];
-        $last  = end($points);
+        $last = end($points);
 
-        if ($first !== $last) $points[] = $first;
+        if ($first !== $last) {
+            $points[] = $first;
+        }
 
-        foreach ($points as &$p) {
-            if (abs($p[0]) <= 90 && abs($p[1]) <= 180) {
-                $p = [$p[1], $p[0]];
+        foreach ($points as &$point) {
+            if (abs($point[0]) <= 90 && abs($point[1]) <= 180) {
+                $point = [$point[1], $point[0]];
             }
         }
 
         $area = 0;
-        $R = 6378137;
+        $earthRadius = 6378137;
 
         for ($i = 0; $i < count($points) - 1; $i++) {
             $lon1 = deg2rad($points[$i][0]);
             $lat1 = deg2rad($points[$i][1]);
-            $lon2 = deg2rad($points[$i+1][0]);
-            $lat2 = deg2rad($points[$i+1][1]);
+            $lon2 = deg2rad($points[$i + 1][0]);
+            $lat2 = deg2rad($points[$i + 1][1]);
 
             $area += ($lon2 - $lon1) * (2 + sin($lat1) + sin($lat2));
         }
 
-        return abs($area * $R * $R / 2);
+        return abs($area * $earthRadius * $earthRadius / 2);
     }
 }

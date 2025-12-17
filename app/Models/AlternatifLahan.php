@@ -12,22 +12,41 @@ class AlternatifLahan extends Model
     'geojson_path',
     'lat',
     'lng',
-    'geometry_type'
+    'geometry_type',
+    'status_validasi',
+    'rekomendasi_dinas',
+    'nilai_total'
 ];
+
+ public function nilaiAlternatif()
+    {
+        return $this->hasMany(
+            NilaiAlternatif::class,
+            'alternatif_id',
+            'id'
+        );
+    }
+public function klasifikasi()
+    {
+        return $this->hasOne(
+            KlasifikasiLahan::class,
+            'alternatif_id',
+            'id'
+        );
+    }
 
     public function nilai()
     {
         return $this->hasMany(NilaiAlternatif::class, 'alternatif_id');
     }
 
-    public function klasifikasi()
-    {
-        return $this->hasOne(KlasifikasiLahan::class, 'alternatif_id', 'id');
-    }
-
     public function vikor()
     {
-        return $this->hasOne(PemeringkatanVikor::class, 'alternatif_id', 'id');
+        return $this->hasOne(
+            PemeringkatanVikor::class,
+            'alternatif_id',
+            'id'
+        );
     }
 
     public function nilaiDinamis()
@@ -35,5 +54,6 @@ class AlternatifLahan extends Model
         return $this->hasMany(NilaiAlternatif::class, 'alternatif_id')
                     ->whereNull('kriteria_id'); 
     }
+    
 }
 

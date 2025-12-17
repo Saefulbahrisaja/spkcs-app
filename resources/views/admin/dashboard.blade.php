@@ -2,775 +2,723 @@
 
 @section('styles')
 <link href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-minimap/dist/Control.MiniMap.min.css"/>
-<link href="https://cdn.jsdelivr.net/npm/leaflet-easyprint@2.1.9/libs/leaflet.min.css" rel="stylesheet">
-<link href=" https://cdn.jsdelivr.net/npm/leaflet-control-geocoder@3.3.1/dist/Control.Geocoder.min.css " rel="stylesheet">
-
+<link href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" rel="stylesheet"/>
 <style>
-/* ========== MAP AREA ========== */
-#map {
-    width: 100%;
-    height: 640px;
-    border-radius: 8px;
-    border: 1px solid #dee2e6;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
+    #map { 
+        width: 100%; 
+        height: 720px; 
+        border-radius: 8px; 
+        border: 1px solid #e6e6e6; 
+        box-shadow: 0 4px 14px rgba(0,0,0,0.06); 
+    }
 
-/* ========== FLOATING SIDEBAR ========== */
-#sidebar {
-    position: absolute;
-    top: 75px;
-    left: 20px;
-    width: 250px;
-    max-height: 75vh;
-    overflow-y: auto;
-    z-index: 1200;
-    padding: 16px;
-    border-radius: 8px;
-    background: #ffffff;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    border: 1px solid #dee2e6;
-}
+    #mapLoading {
+        position: absolute; 
+        inset: 0; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center;
+        background: rgba(255,255,255,0.86); 
+        z-index: 2000; 
+        border-radius: 8px;
+    }
 
-@media (max-width: 1024px) {
-    #sidebar {
+    #mapLoading .spinner { 
+        width: 56px; 
+        height: 56px; 
+        border: 6px solid #e9e9e9; 
+        border-top-color: #0d6efd; 
+        border-radius: 50%; 
+        animation: spin 0.9s linear infinite; 
+    }
+
+    #mapLoading .loading-text { 
+        margin-top: 10px; 
+        font-weight: 600; 
+        color: #333; 
+        font-size: 0.92rem; 
+    }
+
+    @keyframes spin { 
+        to { transform: rotate(360deg); } 
+    }
+
+    #menuBtn {
+        position: absolute; 
+        left: 14px; 
+        top: 14px; 
+        z-index: 1300;
+        width: 44px; 
+        height: 44px; 
+        border-radius: 8px; 
+        background: #fff; 
+        border: 1px solid #e6e6e6;
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+
+    .modal-content { border-radius: 10px; }
+    .small-muted { font-size: 0.88rem; color: #555; }
+    .legend-swatch { 
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        margin-right: 8px;
+        vertical-align: middle; 
+    }
+    .details-card { 
+        border-radius: 8px; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.04); 
+        padding: 12px; 
+        background: #fff; 
+    }
+
+    .leaflet-popup-content-wrapper.custom-popup {
+        border-radius: 10px;
+        padding: 0;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.15);
+    }
+
+    .custom-popup-header {
+        padding: 10px 14px;
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .custom-popup-body {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    .custom-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .custom-row:last-child { border-bottom: none; }
+    .custom-label { color: #555; }
+    .custom-value { font-weight: 600; }
+
+    .attr-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 12px;
+        font-size: 13px;
+    }
+
+    .attr-scroll-box {
+        max-height: 140px;
+        overflow-y: auto;
+        margin-top: 6px;
+        padding-right: 4px;
+    }
+
+    .attr-scroll-box::-webkit-scrollbar { width: 6px; }
+    .attr-scroll-box::-webkit-scrollbar-track { 
+        background: #f1f1f1; 
+        border-radius: 3px; 
+    }
+    .attr-scroll-box::-webkit-scrollbar-thumb { 
+        background: #b8b8b8; 
+        border-radius: 3px; 
+    }
+    .attr-scroll-box::-webkit-scrollbar-thumb:hover { background: #888; }
+
+    #rightLegend {
+        position: absolute;
+        top: 80px;
+        right: 20px;
         width: 220px;
-        top: 70px;
-        left: 15px;
+        background: #ffffff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 12px 14px;
+        z-index: 1200;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        font-size: 0.85rem;
     }
-}
 
-@media (max-width: 768px) {
-    #sidebar {
-        position: fixed;
-        width: 280px;
-        top: 60px;
-        left: 10px;
-        right: auto;
-        max-height: calc(100vh - 80px);
+    .leg-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #333;
     }
-}
 
-@media (max-width: 480px) {
-    #sidebar {
-        width: calc(100% - 30px);
-        max-height: 50vh;
+    .leg-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
     }
-}
 
-#sidebar hr {
-    margin: 14px 0;
-    border: none;
-    border-top: 1px solid #e9ecef;
-}
-
-/* ========== TITLES & LABELS ========== */
-#sidebar h6 {
-    font-weight: 600;
-    margin-bottom: 10px;
-    color: #212529;
-    font-size: 0.95rem;
-}
-
-.form-label.small {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 8px;
-}
-
-/* ========== MODE TOGGLE ========== */
-.mode-toggle {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.mode-toggle label {
-    font-size: 0.875rem;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    color: #495057;
-}
-
-.mode-toggle label input {
-    margin-right: 8px;
-}
-
-/* ========== CHECKBOX AREA ========== */
-.legend-box {
-    background: #f8f9fa;
-    border-radius: 6px;
-    border: 1px solid #dee2e6;
-    padding-left: 10px;
-    padding: auto;
-    max-height: 100px;
-    overflow-y: auto;
-}
-
-.legend-box .form-check {
-    padding: auto;
-}
-
-.legend-box .form-check-label {
-    font-size: 0.8rem;
-    cursor: pointer;
-}
-
-/* ========== ATTRIBUTE LEGEND ========== */
-#attrLegend div {
-    padding: 6px 0;
-    font-size: 0.8rem;
-    color: #495057;
-    display: flex;
-    align-items: center;
-}
-
-/* ========== RIGHT SIDEBAR DETAIL PANEL ========== */
-#detailBox {
-    min-height: 140px;
-    font-size: 0.875rem;
-}
-
-#detailBox h5 {
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: #212529;
-    font-size: 1rem;
-}
-
-.detail-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid #e9ecef;
-    font-size: 0.8rem;
-}
-
-.detail-row:last-child {
-    border-bottom: none;
-}
-
-.detail-row strong {
-    color: #212529;
-    font-weight: 600;
-}
-
-/* ========== FORM CONTROLS ========== */
-.form-select-sm,
-.form-range {
-    font-size: 0.875rem;
-}
-
-.form-select {
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-}
-
-.form-select:focus {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-}
-
-.form-range {
-    height: 4px;
-}
-
-/* ========== BUTTONS ========== */
-.btn-block {
-    width: 100%;
-}
-
-button.btn-sm {
-    padding: 6px 12px;
-    font-size: 0.8rem;
-    border-radius: 4px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-button.btn-sm:hover {
-    transform: translateY(-1px);
-}
-
-.btn-primary {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-}
-
-/* ========== SCROLLBAR ========== */
-#sidebar::-webkit-scrollbar,
-.legend-box::-webkit-scrollbar {
-    width: 6px;
-}
-
-#sidebar::-webkit-scrollbar-track,
-.legend-box::-webkit-scrollbar-track {
-    background: #f1f3f5;
-    border-radius: 3px;
-}
-
-#sidebar::-webkit-scrollbar-thumb,
-.legend-box::-webkit-scrollbar-thumb {
-    background: #adb5bd;
-    border-radius: 3px;
-}
-
-#sidebar::-webkit-scrollbar-thumb:hover,
-.legend-box::-webkit-scrollbar-thumb:hover {
-    background: #868e96;
-}
-
-/* ========== CARD IMPROVEMENTS ========== */
-.card {
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-}
-
-.card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    font-weight: 600;
-    padding: 12px 16px;
-}
-
-.card-body {
-    padding: 14px 16px;
-}
-
-/* ========== RESPONSIVE ========== */
-@media (max-width: 768px) {
-    #sidebar {
-        width: 280px;
-        top: 60px;
-        right: 10px;
+    .leg-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 3px;
+        display: inline-block;
+        margin-right: 8px;
     }
-    
-    #map {
-        height: 500px;
+
+    #legendAtributList {
+        max-height: 120px;
+        overflow-y: auto;
+        padding-right: 4px;
     }
-}
+
+    #legendAtributList::-webkit-scrollbar { width: 6px; }
+    #legendAtributList::-webkit-scrollbar-track { 
+        background: #f1f1f1; 
+        border-radius: 3px; 
+    }
+    #legendAtributList::-webkit-scrollbar-thumb { 
+        background: #b8b8b8; 
+        border-radius: 3px; 
+    }
 </style>
 @endsection
 
 @section('content')
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="mb-0">Peta Kesesuaian Lahan</h4>
+<div class="container-fluid position-relative">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Peta Kesesuaian Lahan — Versi Ringkas (Menu modal)</h4>
         <div class="d-flex gap-2">
-            <button id="exportPNG" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-image"></i> Export PNG
-            </button>
-            <button id="exportPDF" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-file-pdf"></i> Export PDF
-            </button>
+            <button id="exportPNG" class="btn btn-sm btn-outline-primary">Export PNG</button>
+            <button id="exportPDF" class="btn btn-sm btn-outline-secondary">Export PDF</button>
         </div>
     </div>
 
-    <div class="row g-3">
-        <!-- MAP AREA -->
-        <div class="col-lg-9 position-relative">
+    <div class="row">
+        <div class="col-12 position-relative">
             <div id="map"></div>
 
-            <!-- FLOATING SIDEBAR -->
-            <div id="sidebar">
-                <!-- MODE -->
-                <h6>Mode Tampilan</h6>
-                <div class="mode-toggle">
-                    <label><input type="radio" name="viewMode" value="kelas" checked> Kelas</label>
-                    <label><input type="radio" name="viewMode" value="atribut"> Atribut</label>
-                    <label><input type="radio" name="viewMode" value="gabungan"> Gabungan</label>
+            <div id="rightLegend">
+                <h6 class="leg-title">Legenda Kelas</h6>
+                <div class="leg-item">
+                    <input type="checkbox" class="kelas-check me-1" value="S1" checked>
+                    <span class="leg-color" style="background:#00aa00"></span>S1 — Sangat Sesuai
                 </div>
-
+                <div class="leg-item">
+                    <input type="checkbox" class="kelas-check me-1" value="S2" checked>
+                    <span class="leg-color" style="background:#d4d40d"></span>S2 — Cukup Sesuai
+                </div>
+                <div class="leg-item">
+                    <input type="checkbox" class="kelas-check me-1" value="S3" checked>
+                    <span class="leg-color" style="background:#ff8800"></span>S3 — Marginal
+                </div>
+                <div class="leg-item">
+                    <input type="checkbox" class="kelas-check me-1" value="N" checked>
+                    <span class="leg-color" style="background:#cc0000"></span>N — Tidak Sesuai
+                </div>
                 <hr>
+                <h6 class="leg-title">Legenda Atribut</h6>
+                <div id="legendAtributList"></div>
+            </div>
 
-                <!-- PRIORITY -->
+            <button id="menuBtn" class="btn" data-bs-toggle="modal" data-bs-target="#mapControlsModal" title="Open map controls">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12h18M3 6h18M3 18h18"/>
+                </svg>
+            </button>
+
+            <div id="mapLoading" style="display:none;">
+                <div class="spinner"></div>
+                <div class="loading-text">Memuat data peta...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="mapControlsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Kontrol Peta</h6>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label small">Mode</label>
+                <select id="viewModeSelect" class="form-select form-select-sm">
+                    <option value="kelas" selected>Kelas</option>
+                    <option value="atribut">Atribut</option>
+                    <option value="gabungan">Gabungan</option>
+                </select>
+            </div>
+
+            <div class="mb-2">
                 <label class="form-label small">Prioritas Layer</label>
-                <select id="layerPriority" class="form-select form-select-sm mb-3">
+                <select id="layerPriority" class="form-select form-select-sm">
                     <option value="atribut">Atribut di atas</option>
                     <option value="kelas">Kelas di atas</option>
                 </select>
+            </div>
 
-                <hr>
-
-<div>
-    <label class="form-label small">Intersect Analytic (Pilih 2–3 atribut)</label>
-    <select id="intersectAttrs" class="form-select form-select-sm" multiple size="3"></select>
-
-    <button id="runIntersect" class="btn btn-sm btn-success btn-block mt-2">Jalankan Intersect</button>
-    <button id="clearIntersect" class="btn btn-sm btn-outline-secondary btn-block mt-2">Bersihkan Intersect</button>
-</div>
-
-                <!-- OPACITY -->
+            <div class="mb-2">
                 <label class="form-label small">Opacity Kelas</label>
-                <input id="kelasOpacity" type="range" min="0" max="1" step="0.05" value="0.6" class="form-range mb-3">
+                <input id="kelasOpacity" class="form-range" type="range" min="0" max="1" step="0.05" value="0.6">
+            </div>
 
+            <div class="mb-2">
                 <label class="form-label small">Opacity Atribut</label>
-                <input id="atributOpacity" type="range" min="0" max="1" step="0.05" value="0.8" class="form-range mb-3">
+                <input id="atributOpacity" class="form-range" type="range" min="0" max="1" step="0.05" value="0.8">
+            </div>
 
-                <!-- FILTER ATRIBUT -->
+            <div class="mb-2">
+                <label class="form-label small">Intersect Analytic (pilih 2–3)</label>
+                <select id="intersectAttrs" class="form-select form-select-sm" multiple size="3"></select>
+                <div class="d-grid gap-2 mt-2">
+                    <button id="runIntersect" class="btn btn-sm btn-success">Jalankan Intersect</button>
+                    <button id="clearIntersect" class="btn btn-sm btn-outline-secondary">Bersihkan Intersect</button>
+                </div>
+            </div>
+
+            <div class="mb-2">
                 <label class="form-label small">Filter Atribut</label>
-                <div id="atributChecks" class="legend-box"></div>
-            </div>
-        </div>
-
-        <!-- RIGHT SIDEBAR -->
-        <div class="col-lg-3">
-
-        <!-- DETAIL PANEL -->
-            <div class="card shadow-sm mt-3">
-                <div class="card-header">
-                    Detail Polygon
-                </div>
-                <div class="card-body small" id="detailBox">
-                    <em class="text-muted">Klik polygon untuk melihat detail...</em>
-                </div>
-            </div>
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    Legenda Kelas
-                </div>
-                <div class="card-body small">
-                    <div style="margin-bottom: 8px;"><span style="display:inline-block;width:16px;height:16px;background:#00aa00;border-radius:2px;margin-right:8px"></span>S1 — Sangat Sesuai</div>
-                    <div style="margin-bottom: 8px;"><span style="display:inline-block;width:16px;height:16px;background:#d4d40d;border-radius:2px;margin-right:8px"></span>S2 — Cukup Sesuai</div>
-                    <div style="margin-bottom: 8px;"><span style="display:inline-block;width:16px;height:16px;background:#ff8800;border-radius:2px;margin-right:8px"></span>S3 — Marginal</div>
-                    <div style="margin-bottom: 12px;"><span style="display:inline-block;width:16px;height:16px;background:#cc0000;border-radius:2px;margin-right:8px"></span>N — Tidak Sesuai</div>
-
-                    <hr style="margin: 12px 0;">
-
-                    <strong style="font-size: 0.85rem;">Atribut</strong>
-                    <div id="attrLegend" class="mt-3"></div>
-                </div>
+                <div id="atributChecks" class="legend-box" style="max-height:120px; overflow:auto;"></div>
             </div>
 
-            
+            <div class="text-end">
+                <button class="btn btn-sm btn-primary" data-bs-dismiss="modal">Tutup</button>
+            </div>
         </div>
     </div>
 </div>
 @endsection
 
 @section('scripts')
-<!-- Leaflet & plugins -->
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet-minimap@3.6.1/dist/Control.MiniMap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet-easyprint@2.1.9/dist/bundle.min.js"></script>
-<script src=" https://cdn.jsdelivr.net/npm/leaflet-control-geocoder@3.3.1/dist/Control.Geocoder.min.js "></script>
-
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
 <script>
-/* ========= INIT MAP & BASE LAYERS ========= */
-const map = L.map('map', { center: [-6.3,106.16], zoom: 10 });
-const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png');
+// ============================================
+// MAP CONFIGURATION & STATE
+// ============================================
+const classColors = { S1: '#00aa00', S2: '#d4d40d', S3: '#ff8800', N: '#cc0000', default: '#999' };
+const kelasColorMap = { S1: '#00AA00', S2: '#D4D40D', S3: '#FF8800', N: '#CC0000' };
 
-L.control.layers(
-    { "OSM": osm, "Satellite": sat, "TopoMap": terrain }
-).addTo(map);
-
-/* ========= FIX MINIMAP ========= */
-const miniLayer = L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { attribution: '' }
-);
-
-const mini = new L.Control.MiniMap(miniLayer, {
-    toggleDisplay: true,
-    minimized: false
-}).addTo(map);
-
-/* ========= Controls ========= */
-const printer = L.easyPrint({
-  title: 'Print map',
-  position: 'topleft',
-  elementsToHide: '.leaflet-control-zoom'
-}).addTo(map);
-
-L.control.scale().addTo(map);
-const geocoder = L.Control.geocoder({ placeholder: 'Cari alamat/lokasi...' }).addTo(map);
-
-/* ========= Data containers ========= */
 let geojsonData = null;
-let classLayerGroup = L.layerGroup().addTo(map);
+let classLayerGroup = L.layerGroup();
 let attributeLayers = {};
-let clusterGroup = L.markerClusterGroup();
+let clusterGroup = L.markerClusterGroup({ chunkedLoading: true, chunkProgress: false });
+let intersectLayerGroup = L.layerGroup();
 
-const classColors = { S1:'#00aa00', S2:'#d4d40d', S3:'#ff8800', N:'#cc0000', default:'#999' };
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+const showLoader = () => document.getElementById('mapLoading').style.display = 'flex';
+const hideLoader = () => document.getElementById('mapLoading').style.display = 'none';
+const generateColor = (i) => `hsl(${(i * 47) % 360}, 70%, 45%)`;
+const formatLabel = (key) => key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+const ensurePolygon = (g) => !g ? null : (g.type === 'Polygon' || g.type === 'MultiPolygon' ? g : null);
 
-/* ========= Fetch data ========= */
+// ============================================
+// MAP INITIALIZATION
+// ============================================
+const map = L.map('map', { center: [-6.3, 106.16], zoom: 10, preferCanvas: true, zoomControl: true });
+const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+
+L.control.layers({ "OSM": osm, "Satellite": sat }, {}, { collapsed: true }).addTo(map);
+L.control.scale({ metric: true }).addTo(map);
+intersectLayerGroup.addTo(map);
+
+// ============================================
+// FETCH DATA
+// ============================================
 async function fetchAttributes() {
-  const r = await fetch("{{ route('map.atribut') }}");
-  const list = await r.json();
-  return list;
+    try {
+        const r = await fetch("{{ route('map.atribut') }}");
+        return r.ok ? await r.json() : [];
+    } catch (e) {
+        console.error(e);
+        return [];
+    }
 }
 
 async function fetchGeoJSON() {
-  const r = await fetch("{{ route('map.geojson') }}");
-  return await r.json();
+    try {
+        const r = await fetch("{{ route('map.geojson') }}");
+        if (!r.ok) throw new Error('Failed to fetch GeoJSON');
+        return await r.json();
+    } catch (e) {
+        console.error(e);
+        throw e;
+    }
 }
 
-/* ========= Build UI ========= */
+// ============================================
+// UI BUILDERS
+// ============================================
 function buildAtributChecks(attrs) {
-  const container = document.getElementById('atributChecks');
-  container.innerHTML = '';
+    const container = document.getElementById('atributChecks');
+    const interSel = document.getElementById('intersectAttrs');
+    container.innerHTML = '';
+    interSel.innerHTML = '';
 
-  attrs.forEach((a,i) => {
-    const id = 'attr_cb_'+i;
-    const div = document.createElement('div');
-    div.className = 'form-check';
-    div.innerHTML = `<input class="form-check-input attr-check" type="checkbox" id="${id}" value="${a}">
-                     <label class="form-check-label" for="${id}">${a}</label>`;
-    container.appendChild(div);
-  });
+    attrs.forEach((a, i) => {
+        const id = 'attr_cb_' + i;
+        const div = document.createElement('div');
+        div.className = 'form-check';
+        div.innerHTML = `
+            <input class="form-check-input attr-check" type="checkbox" id="${id}" value="${a}">
+            <label class="form-check-label small" for="${id}">${a}</label>
+        `;
+        container.appendChild(div);
 
-  const attrLegend = document.getElementById('attrLegend');
-  attrLegend.innerHTML = '';
-  attrs.forEach((a,i)=>{
-    const col = generateColor(i);
-    const span = document.createElement('div');
-    span.innerHTML = `<span style="display:inline-block;width:16px;height:16px;background:${col};border-radius:2px;margin-right:8px"></span>${a}`;
-    attrLegend.appendChild(span);
-  });
-
-  const interSel = document.getElementById('intersectAttrs');
-attrs.forEach(a => {
-    const o = document.createElement('option'); 
-    o.value = a; 
-    o.textContent = a;
-    interSel.appendChild(o);
-});
+        const option = document.createElement('option');
+        option.value = a;
+        option.textContent = a;
+        interSel.appendChild(option);
+    });
 }
 
-function generateColor(i) {
-  return `hsl(${(i*47)%360},70%,45%)`;
+function buildLegendAtribut(attrs) {
+    const box = document.getElementById("legendAtributList");
+    box.innerHTML = "";
+
+    attrs.forEach((a, i) => {
+        const color = generateColor(i);
+        const div = document.createElement("div");
+        div.className = "leg-item";
+        div.innerHTML = `<span class="leg-color" style="background:${color}"></span>${a}`;
+        box.appendChild(div);
+    });
 }
 
-/* ========= Prepare layers ========= */
+// ============================================
+// STYLE & FILTERING
+// ============================================
+function getEnabledClasses() {
+    return Array.from(document.querySelectorAll('.kelas-check'))
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+}
+
+function styleKelas(feature) {
+    const kelas = feature.properties?.kelas_kesesuaian ?? feature.properties?.kelas ?? 'N';
+    return {
+        color: classColors[kelas] ?? classColors.default,
+        weight: 1,
+        fillOpacity: parseFloat(document.getElementById('kelasOpacity').value || 0.6),
+        fillColor: classColors[kelas] ?? classColors.default
+    };
+}
+
+// ============================================
+// LAYER PREPARATION
+// ============================================
 function prepareLayers(fc, attributes) {
-  geojsonData = fc;
-  classLayerGroup.clearLayers();
-  Object.values(attributeLayers).forEach(lg => lg.clearLayers());
-  attributeLayers = {};
-  clusterGroup.clearLayers();
+    geojsonData = fc;
+    classLayerGroup.clearLayers();
+    clusterGroup.clearLayers();
+    attributeLayers = {};
 
-  attributes.forEach((a,i) => {
-    attributeLayers[a] = L.layerGroup();
-    attributeLayers[a].attrColor = generateColor(i);
-  });
+    const kelasGeo = L.geoJSON(fc, {
+        filter: (feature) => {
+            const allowed = getEnabledClasses();
+            const k = feature.properties?.kelas_kesesuaian ?? feature.properties?.kelas ?? 'N';
+            return allowed.includes(k);
+        },
+        style: styleKelas,
+        pointToLayer: (feature, latlng) => {
+            const kelas = feature.properties?.kelas_kesesuaian ?? feature.properties?.kelas;
+            return L.circleMarker(latlng, { 
+                radius: 5, 
+                fillOpacity: 0.9, 
+                weight: 0, 
+                fillColor: classColors[kelas] || classColors.default 
+            });
+        },
+        onEachFeature: (feature, layer) => {
+            layer.on({
+                click: (e) => showDetail(feature.properties, e.target),
+                mouseover: (e) => { if (e.target.setStyle) e.target.setStyle({ weight: 2 }); },
+                mouseout: (e) => { if (e.target.setStyle) e.target.setStyle({ weight: 1 }); }
+            });
+        }
+    });
 
-  fc.features.forEach(f => {
-    const props = f.properties || {};
-    const geom = f.geometry;
-    if (!geom) return;
+    classLayerGroup.addLayer(kelasGeo).addTo(map);
 
-    const kelas = props.kelas_kesesuaian ?? props.kelas ?? 'N';
-    const kelasColor = classColors[kelas] ?? classColors.default;
-
-    let layer;
-    if (geom.type === 'Point' || geom.type === 'MultiPoint') {
-      const coords = geom.coordinates;
-      const latlng = (geom.type === 'Point') ? [coords[1], coords[0]] : [coords[1][0], coords[0][0]];
-      layer = L.circleMarker(latlng, { radius:7, color: kelasColor, fillColor: kelasColor, fillOpacity:0.8 });
-      clusterGroup.addLayer(layer);
-    } else {
-      layer = L.geoJSON(f, {
-        style: () => ({ color: kelasColor, weight:2, fillOpacity: parseFloat(document.getElementById('kelasOpacity').value) })
-      });
+    const points = fc.features.filter(f => f.geometry && f.geometry.type === 'Point');
+    if (points.length > 80) {
+        const markers = L.featureGroup();
+        points.forEach(p => {
+            const coords = p.geometry.coordinates;
+            const kelas = p.properties?.kelas_kesesuaian || p.properties?.kelas;
+            const mk = L.circleMarker([coords[1], coords[0]], { 
+                radius: 5, 
+                fillColor: classColors[kelas] || classColors.default, 
+                fillOpacity: 0.9, 
+                weight: 0 
+            });
+            mk.on('click', () => showDetail(p.properties, mk));
+            markers.addLayer(mk);
+        });
+        clusterGroup.addLayer(markers).addTo(map);
     }
 
-    layer.on('click', () => showDetail(props, f));
-    layer.on('mouseover', (e) => {
-      e.target.setStyle && e.target.setStyle({ weight:4 });
-      const tip = `<strong>${props.lokasi ?? '-'}</strong><br>${kelas} • Q:${props.vikor_q ?? '-'}`;
-      layer.bindTooltip(tip, { sticky:true }).openTooltip();
+    attributes.forEach((a, idx) => {
+        attributeLayers[a] = L.geoJSON(null, { 
+            style: { 
+                color: generateColor(idx), 
+                weight: 1, 
+                fillOpacity: parseFloat(document.getElementById('atributOpacity').value || 0.8) 
+            } 
+        });
     });
-    layer.on('mouseout', (e) => {
-      e.target.setStyle && e.target.setStyle({ weight:2 });
-    });
 
-    classLayerGroup.addLayer(layer);
+    try {
+        const b = kelasGeo.getBounds();
+        if (b.isValid && b.isValid()) map.fitBounds(b, { padding: [8, 8], maxZoom: 15 });
+    } catch (e) {
+        console.warn(e);
+    }
 
-    attributes.forEach(a => {
-      let val = props[a] ?? props['atribut_'+a] ?? props.atribut ?? props.atribut_nama ?? props[a.toLowerCase()];
-      if (val === undefined && typeof props === 'object') {
-        const foundKey = Object.keys(props).find(k => k.toLowerCase() === a.toLowerCase());
-        if (foundKey) val = props[foundKey];
-      }
-      if (val === undefined || val === null) return;
-
-      const color = attributeLayers[a].attrColor;
-      let attrLayer = L.geoJSON(f, {
-        style: () => ({ color: color, weight:2, fillOpacity: parseFloat(document.getElementById('atributOpacity').value) })
-      });
-
-      attrLayer.on('click', () => showDetail(props, f));
-      attributeLayers[a].addLayer(attrLayer);
-    });
-  });
-
-  classLayerGroup.addTo(map);
-  if (clusterGroup.getLayers().length) clusterGroup.addTo(map);
-  map.invalidateSize();
+    hideLoader();
 }
 
-/* ========= Show detail ========= */
-function showDetail(props, feature) {
-  const box = document.getElementById('detailBox');
-  box.innerHTML = '';
-  const h = document.createElement('h5'); h.textContent = props.lokasi ?? '—';
-  box.appendChild(h);
 
-  const rows = [
-    ['Kelas', props.kelas_kesesuaian ?? '-'],
-    ['Skor Total', props.nilai_total ?? '-'],
-    ['Ranking VIKOR', props.vikor_ranking ?? '-'],
-    ['Q-Value', props.vikor_q ?? '-']
-  ];
-  rows.forEach(r=>{
-    const div = document.createElement('div'); div.className='detail-row';
-    div.innerHTML = `<div>${r[0]}</div><div><strong>${r[1]}</strong></div>`;
-    box.appendChild(div);
-  });
+async function ambilRekomendasiDinas(alternatifId) {
+    try {
+        const res = await fetch(`/api/rekomendasi/${alternatifId}`);
+        if (!res.ok) throw new Error('Gagal ambil rekomendasi');
 
-  const title = document.createElement('div'); title.className='mt-3 mb-2'; title.innerHTML = '<strong>Atribut:</strong>';
-  box.appendChild(title);
-
-  const ul = document.createElement('div');
-  Object.keys(props).forEach(k=>{
-    if (['lokasi','kelas_kesesuaian','nilai_total','vikor_q','vikor_v','alternatif_id','vikor_ranking','skor_normalisasi'].includes(k)) return;
-    const pval = props[k];
-    const row = document.createElement('div'); row.className='detail-row';
-    row.innerHTML = `<div>${k}</div><div>${(pval===null||pval===undefined)?'-':pval}</div>`;
-    ul.appendChild(row);
-  });
-  box.appendChild(ul);
+        const data = await res.json();
+        return data.rekomendasi || 'Rekomendasi belum tersedia.';
+    } catch (e) {
+        console.error(e);
+        return 'Rekomendasi tidak dapat dimuat.';
+    }
 }
 
-/* ========= Event handlers ========= */
-document.querySelectorAll('input[name="viewMode"]').forEach(r=>{
-  r.addEventListener('change', ()=> updateViewMode());
-});
-document.getElementById('layerPriority').addEventListener('change', ()=> updateViewMode());
+
+function showDetail(props, layer) {
+    const kelas = props.kelas_kesesuaian ?? props.kelas ?? 'N';
+    const warnaHeader = kelasColorMap[kelas] ?? "#666";
+    const rekom = ambilRekomendasiDinas(kelas);
+
+    let attrHTML = "";
+    const excludeKeys = ['lokasi', 'kelas_kesesuaian', 'nilai_total', 'vikor_q', 'vikor_v', 'alternatif_id', 'vikor_ranking', 'skor_normalisasi'];
+    
+    Object.keys(props).forEach(k => {
+        if (excludeKeys.includes(k) || props[k] === null || props[k] === "") return;
+        attrHTML += `
+            <div class="custom-row">
+                <span class="custom-label">${formatLabel(k)}</span>
+                <span class="custom-value">${props[k]}</span>
+            </div>
+        `;
+    });
+
+    const html = `
+        <div class="custom-popup-content">
+            <div class="custom-popup-header" style="background:${warnaHeader}">${props.lokasi ?? 'Wilayah'}</div>
+            <div class="custom-popup-body">
+                <div class="custom-row">
+                    <span class="custom-label">Kelas Kesesuaian</span>
+                    <span class="custom-value">${kelas}</span>
+                </div>
+                <hr>
+                <strong>Sampel Kriteria</strong>
+                <div class="attr-scroll-box" style="margin-top:6px;">${attrHTML}</div>
+                <hr>
+                <strong style="color:${warnaHeader};">Direkomendasikan:</strong>
+                <div class="mt-1" id="rekom-${props.alternatif_id}" class="small-muted">
+                    Memuat rekomendasi...
+                </div>
+            </div>
+        </div>
+    `;
+
+    layer.bindPopup(html, { maxWidth: 340, className:'custom-popup' }).openPopup();
+
+    ambilRekomendasiDinas(props.alternatif_id)
+        .then(text => {
+            const el = document.getElementById(`rekom-${props.alternatif_id}`);
+            if (el) el.innerHTML = `<div ><em> ${text}</em></div>`;
+        });
+}
+
+// ============================================
+// VIEW MODE & OPACITY HANDLERS
+// ============================================
+function updateViewModeFromModal() {
+    const mode = document.getElementById('viewModeSelect').value;
+    const priority = document.getElementById('layerPriority').value;
+
+    Object.values(attributeLayers).forEach(l => map.removeLayer(l));
+    map.removeLayer(classLayerGroup);
+
+    if (mode === 'kelas') {
+        classLayerGroup.addTo(map);
+        if (clusterGroup.getLayers().length) clusterGroup.addTo(map);
+    } else if (mode === 'atribut') {
+        document.querySelectorAll('.attr-check').forEach(cb => {
+            if (cb.checked && attributeLayers[cb.value]) attributeLayers[cb.value].addTo(map);
+        });
+    } else { // gabungan
+        if (priority === 'atribut') {
+            classLayerGroup.addTo(map);
+        }
+        document.querySelectorAll('.attr-check').forEach(cb => {
+            if (cb.checked && attributeLayers[cb.value]) attributeLayers[cb.value].addTo(map);
+        });
+        if (priority === 'kelas') classLayerGroup.addTo(map);
+    }
+}
 
 document.getElementById('kelasOpacity').addEventListener('input', () => {
-  classLayerGroup.eachLayer(l => {
-    if (l.setStyle) l.setStyle({ fillOpacity: parseFloat(document.getElementById('kelasOpacity').value) });
-  });
+    const v = parseFloat(document.getElementById('kelasOpacity').value);
+    classLayerGroup.eachLayer(l => { if (l.setStyle) l.setStyle({ fillOpacity: v }); });
 });
+
 document.getElementById('atributOpacity').addEventListener('input', () => {
-  Object.keys(attributeLayers).forEach(a => {
-    attributeLayers[a].eachLayer(l => { if (l.setStyle) l.setStyle({ fillOpacity: parseFloat(document.getElementById('atributOpacity').value) }); });
-  });
+    const v = parseFloat(document.getElementById('atributOpacity').value);
+    Object.values(attributeLayers).forEach(al => {
+        if (al && al.eachLayer) al.eachLayer(l => { if (l.setStyle) l.setStyle({ fillOpacity: v }); });
+    });
+});
+
+// ============================================
+// ATTRIBUTE TOGGLE (LAZY LOAD)
+// ============================================
+document.addEventListener('change', (e) => {
+    if (!e.target.classList?.contains('attr-check')) return;
+    
+    const attr = e.target.value;
+    if (!geojsonData) return;
+
+    if (e.target.checked) {
+        if (!attributeLayers[attr] || Object.keys(attributeLayers[attr]._layers || {}).length === 0) {
+            const filtered = geojsonData.features.filter(f => {
+                const p = f.properties || {};
+                return (p[attr] !== undefined && p[attr] !== null) || Object.keys(p).some(k => k.toLowerCase() === attr.toLowerCase());
+            });
+            attributeLayers[attr] = L.geoJSON(filtered, {
+                style: {
+                    color: generateColor(Object.keys(attributeLayers).indexOf(attr) || 0),
+                    weight: 1,
+                    fillOpacity: parseFloat(document.getElementById('atributOpacity').value || 0.8)
+                }
+            });
+        }
+        attributeLayers[attr].addTo(map);
+    } else {
+        if (attributeLayers[attr]) map.removeLayer(attributeLayers[attr]);
+    }
 });
 
 document.addEventListener('change', (e) => {
-  if (e.target && e.target.classList.contains('attr-check')) {
-    const attr = e.target.value;
-    if (e.target.checked) {
-      attributeLayers[attr] && attributeLayers[attr].addTo(map);
-    } else {
-      attributeLayers[attr] && map.removeLayer(attributeLayers[attr]);
-    }
-  }
+    if (!e.target.classList?.contains('kelas-check')) return;
+    prepareLayers(geojsonData, Object.keys(attributeLayers));
+    updateViewModeFromModal();
 });
 
-/* ========= Update view mode ========= */
-function updateViewMode() {
-  const mode = document.querySelector('input[name="viewMode"]:checked').value;
-  const priority = document.getElementById('layerPriority').value;
-
-  map.removeLayer(classLayerGroup);
-  Object.values(attributeLayers).forEach(l=> map.removeLayer(l));
-
-  if (mode === 'kelas') {
-    classLayerGroup.addTo(map);
-    clusterGroup.addTo(map);
-  } else if (mode === 'atribut') {
-    document.querySelectorAll('.attr-check').forEach(cb=>{
-      if (cb.checked) attributeLayers[cb.value] && attributeLayers[cb.value].addTo(map);
-    });
-    map.removeLayer(classLayerGroup);
-  } else {
-    if (priority === 'atribut') {
-      classLayerGroup.addTo(map);
-      document.querySelectorAll('.attr-check').forEach(cb=>{
-        if (cb.checked) attributeLayers[cb.value] && attributeLayers[cb.value].addTo(map);
-      });
-      Object.values(attributeLayers).forEach(lg => lg.eachLayer(layer => layer.bringToFront && layer.bringToFront()));
-    } else {
-      document.querySelectorAll('.attr-check').forEach(cb=>{
-        if (cb.checked) attributeLayers[cb.value] && attributeLayers[cb.value].addTo(map);
-      });
-      classLayerGroup.addTo(map);
-      classLayerGroup.eachLayer(l => l.bringToFront && l.bringToFront());
-    }
-  }
-}
-
-/* ========= Export ========= */
-document.getElementById('exportPNG').addEventListener('click', ()=> {
-  printer.printMap('CurrentSize', 'ExportedMap');
-});
-document.getElementById('exportPDF').addEventListener('click', ()=> {
-  window.print();
-});
-
-/* ========= Init ========= */
-(async function init() {
-  try {
-    const [attrs, fc] = await Promise.all([ fetchAttributes(), fetchGeoJSON() ]);
-    buildAtributChecks(attrs || []);
-    prepareLayers(fc, attrs || []);
-    geojsonData = fc;
-    updateViewMode();
-    try {
-      const tempLayer = L.geoJSON(fc);
-      const bounds = tempLayer.getBounds();
-      if (bounds.isValid()) map.fitBounds(bounds, { padding: [20, 20], maxZoom: 13 });
-    } catch (e) {
-      console.warn("Zoom bounds invalid:", e);
-    }
-  } catch (e) {
-    console.error(e);
-    alert('Gagal memuat data peta. Periksa endpoint map.geojson / map.atribut di server.');
-  }
-})();
-
-/* ============================================================
-   INTERSECT LAYER & ANALISIS
-============================================================ */
-let intersectLayerGroup = L.layerGroup().addTo(map);
-
-/* Utility memastikan geometri polygon */
-function ensurePolygon(g) {
-    if (!g) return null;
-    if (g.type === "Polygon" || g.type === "MultiPolygon") return g;
-    return null;
-}
-
-/* === DETAIL INTERSECT === */
-function showIntersectDetail(feature, attrList) {
-    const box = document.getElementById("detailBox");
-    box.innerHTML = "";
-
-    const h = document.createElement("h5");
-    h.textContent = "HASIL INTERSECT";
-    box.appendChild(h);
-
-    // hitung luas turf.js
-    const luasM2 = turf.area(feature);
-    const luasHa = (luasM2 / 10000).toFixed(2);
-
-    const row = document.createElement("div");
-    row.className = "detail-row";
-    row.innerHTML = `<div>Luas</div><div><strong>${luasHa} ha</strong></div>`;
-    box.appendChild(row);
-
-    // Atribut terlibat
-    const t = document.createElement("div");
-    t.className = 'mt-3 mb-2';
-    t.innerHTML = "<strong>Atribut yang digunakan:</strong>";
-    box.appendChild(t);
-
-    attrList.forEach(a => {
-        const r = document.createElement("div");
-        r.className = "detail-row";
-        r.innerHTML = `<div>${a}</div><div>✔</div>`;
-        box.appendChild(r);
-    });
-}
-
-/* === ANALISIS INTERSECT === */
+// ============================================
+// INTERSECT ANALYSIS
+// ============================================
 function runIntersectAnalysis(attrList) {
-
     intersectLayerGroup.clearLayers();
-
     if (!geojsonData) return alert("GeoJSON belum dimuat.");
 
-    // Ambil fitur berdasarkan atribut
-    let attrFeatures = attrList.map(attr => {
-        return geojsonData.features.filter(f => f.properties.atribut === attr);
-    });
+    const attrFeatures = attrList.map(attr =>
+        geojsonData.features.filter(f => {
+            const p = f.properties || {};
+            return (p.atribut === attr) || (p[attr] !== undefined) || Object.keys(p).some(k => k.toLowerCase() === attr.toLowerCase());
+        })
+    );
 
-    if (attrFeatures.some(f => f.length === 0)) {
-        return alert("Ada atribut tanpa polygon pada data.");
-    }
+    if (attrFeatures.some(a => a.length === 0)) return alert("Ada atribut tanpa polygon.");
 
-    /* =========== LANGKAH 1: INTERSECT ATTR 1 & ATTR 2 =========== */
-    let g1 = attrFeatures[0].map(f => ensurePolygon(f.geometry)).filter(Boolean);
-    let g2 = attrFeatures[1].map(f => ensurePolygon(f.geometry)).filter(Boolean);
-
+    const g1 = attrFeatures[0].map(f => ensurePolygon(f.geometry)).filter(Boolean);
+    const g2 = attrFeatures[1].map(f => ensurePolygon(f.geometry)).filter(Boolean);
     let mid = [];
 
-    g1.forEach(A => {
-        g2.forEach(B => {
-            let inter = turf.intersect(turf.feature(A), turf.feature(B));
+    g1.forEach(A => g2.forEach(B => {
+        try {
+            const inter = turf.intersect(turf.feature(A), turf.feature(B));
             if (inter) mid.push(inter);
-        });
-    });
+        } catch (e) { }
+    }));
 
-    /* =========== ATTRIBUT KE-3 =========== */
     let finalRes = mid;
-
     if (attrList.length === 3) {
-
-        let g3 = attrFeatures[2].map(f => ensurePolygon(f.geometry)).filter(Boolean);
+        const g3 = attrFeatures[2].map(f => ensurePolygon(f.geometry)).filter(Boolean);
         let temp = [];
-
-        mid.forEach(M => {
-            g3.forEach(C => {
-                let inter2 = turf.intersect(M, turf.feature(C));
+        mid.forEach(M => g3.forEach(C => {
+            try {
+                const inter2 = turf.intersect(M, turf.feature(C));
                 if (inter2) temp.push(inter2);
-            });
-        });
-
+            } catch (e) { }
+        }));
         finalRes = temp;
     }
 
-    if (!finalRes || finalRes.length === 0) {
-        return alert("Tidak ada area tumpang tindih untuk atribut terpilih.");
-    }
+    if (!finalRes || finalRes.length === 0) return alert("Tidak ada area tumpang tindih.");
 
-    /* =========== TAMPILKAN DI PETA =========== */
     finalRes.forEach((ft, i) => {
         const color = `hsl(${(i * 71) % 360}, 75%, 45%)`;
-
-        const LAYER = L.geoJSON(ft, {
-            style: {
-                color,
-                weight: 3,
-                fillOpacity: 0.55
-            }
-        }).addTo(intersectLayerGroup);
-
-        LAYER.on("click", () => showIntersectDetail(ft, attrList));
+        const layer = L.geoJSON(ft, { style: { color, weight: 3, fillOpacity: 0.55 } }).addTo(intersectLayerGroup);
+        layer.on('click', () => {
+            const luasHa = (turf.area(ft) / 10000).toFixed(2);
+            console.log(`Luas: ${luasHa} ha`);
+        });
     });
 
-    alert("Intersect berhasil! Lihat area berwarna pada peta.");
+    alert("Intersect selesai — cek area berwarna.");
 }
 
-/* === BUTTON HANDLER === */
-document.getElementById("runIntersect").addEventListener("click", () => {
-    const selected = Array.from(document.getElementById("intersectAttrs").selectedOptions)
-                        .map(o => o.value);
-
-    if (selected.length < 2 || selected.length > 3) {
-        return alert("Pilih 2 atau 3 atribut untuk intersect.");
-    }
-
+document.getElementById('runIntersect').addEventListener('click', () => {
+    const selected = Array.from(document.getElementById('intersectAttrs').selectedOptions).map(o => o.value);
+    if (selected.length < 2 || selected.length > 3) return alert("Pilih 2 atau 3 atribut.");
     runIntersectAnalysis(selected);
 });
 
-document.getElementById("clearIntersect").addEventListener("click", () => {
+document.getElementById('clearIntersect').addEventListener('click', () => {
     intersectLayerGroup.clearLayers();
-    document.getElementById("detailBox").innerHTML = "<em>Intersect dihapus.</em>";
 });
 
+// ============================================
+// INITIALIZATION
+// ============================================
+(async function init() {
+    try {
+        showLoader();
+        const [attrs, fc] = await Promise.all([fetchAttributes(), fetchGeoJSON()]);
+        buildAtributChecks(attrs || []);
+        buildLegendAtribut(attrs);
+        prepareLayers(fc, attrs || []);
+        geojsonData = fc;
+
+        const modal = document.getElementById('mapControlsModal');
+        modal.addEventListener('hidden.bs.modal', updateViewModeFromModal);
+        document.getElementById('viewModeSelect').addEventListener('change', updateViewModeFromModal);
+        document.getElementById('layerPriority').addEventListener('change', updateViewModeFromModal);
+    } catch (err) {
+        console.error(err);
+        alert("Gagal memuat data peta. Periksa endpoint server.");
+    } finally {
+        hideLoader();
+    }
+})();
+
+// ============================================
+// EXPORT HANDLERS
+// ============================================
+document.getElementById('exportPNG').addEventListener('click', () => {
+    alert('Export PNG: gunakan browser print atau integrate leaflet-easyPrint jika diperlukan.');
+});
+
+document.getElementById('exportPDF').addEventListener('click', () => window.print());
 </script>
 @endsection

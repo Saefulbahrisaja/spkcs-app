@@ -19,6 +19,7 @@ use App\Http\Controllers\AlternatifController;
 use App\Http\Controllers\LaporanEvaluasiController;
 use App\Http\Controllers\Admin\EvaluationPipelineController;
 
+
 use Illuminate\Support\Facades\Artisan;
 //use App\Http\Controllers\Admin\ThresholdController;
 
@@ -106,12 +107,14 @@ Route::middleware(['auth', 'role:dinas'])
     Route::get('/', fn() => view('dinas.dashboard'))->name('dashboard');
 
     Route::get('evaluasi', [EvaluasiController::class, 'index'])->name('evaluasi.index');
-   
-    Route::resource('rekomendasi', RekomendasiController::class);
-
-    Route::post('laporan/{id}/review', [LaporanController::class, 'review'])->name('laporan.review');
-    Route::post('laporan/{id}/approve', [LaporanController::class, 'approve'])->name('laporan.approve');
-    Route::get('laporan/{id}/download', [LaporanController::class, 'download'])->name('laporan.download');
+    Route::get('/dinas/evaluasi', [EvaluasiController::class, 'index'])->name('evaluasi');
+    Route::get('evaluasi/{id}', [EvaluasiController::class, 'show'])->name('evaluasi.show');
+    Route::post('evaluasi/{id}/validasi', [EvaluasiController::class, 'validasi'])->name('evaluasi.validasi');
+    Route::get('/dinas/evaluasi/pdf', [EvaluasiController::class, 'generate'])->name('evaluasi.pdf');
+    Route::get(
+    '/dinas/evaluasi/{id}/pdf',
+    [EvaluasiController::class, 'generatePerWilayah']
+)->name('evaluasi.wilayah.pdf');
 });
 
 Route::middleware(['auth', 'role:penyuluh'])

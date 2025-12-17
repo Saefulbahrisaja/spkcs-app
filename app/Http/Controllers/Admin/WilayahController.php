@@ -14,6 +14,28 @@ use ZipArchive;
 
 class WilayahController extends Controller
 {
+    private function parseNilaiNumerik(string $atribut, string $nilai): ?float
+    {
+        $v = strtolower(trim($nilai));
+        $v = str_replace(',', '.', $v);
+
+        return match (strtolower($atribut)) {
+            'suhu rata-rata'   => floatval($v),
+            'kelembaban'      => floatval(str_replace('%', '', $v)),
+            'bulan kering'    => floatval($v),
+            'curah hujan'     => floatval(str_replace('mm', '', $v)),
+            'drainase'        => floatval($v), // skor
+            'texture'         => floatval($v), // skor
+            'kedalaman tanah' => floatval(str_replace('cm', '', $v)),
+            'ktk'             => floatval(str_replace(['cmol','/kg'], '', $v)),
+            'kejenuhan basa'  => floatval(str_replace('%', '', $v)),
+            'ph tanah'        => floatval($v),
+            'c-organik'       => floatval(str_replace('%', '', $v)),
+            default           => null
+        };
+    }
+
+
     public function index()
     {
         return view('admin.wilayah.index', [
@@ -24,8 +46,11 @@ class WilayahController extends Controller
 
     public function create()
     {
-        $existingWilayah = AlternatifLahan::with('nilaiDinamis')->get()->map(function($w){
+        $subKriteria = Kriteria::whereNotNull('parent_id')
+            ->orderBy('nama_kriteria')
+            ->get(['id','nama_kriteria']);
 
+        $existingWilayah = AlternatifLahan::with('nilaiDinamis')->get()->map(function($w){
             // Ambil GeoJSON Feature
             $feature = null;
             if ($w->geojson_path && Storage::disk('public')->exists($w->geojson_path)) {
@@ -49,29 +74,29 @@ class WilayahController extends Controller
         });
 
         return view('admin.wilayah.create', [
-            'existingWilayah' => $existingWilayah
+            'existingWilayah' => $existingWilayah,
+            'subKriteria'     => $subKriteria,
         ]);
     }
 
-
+    
     public function store(Request $request)
     {
         $request->validate([
-            'lokasi' => 'nullable|string',
-            'geo'    => 'required|file|max:150000',
-            'nilai_storage' => 'required|string',
+            'geo'            => 'required|file|max:150000',
+            'nilai_storage'  => 'required|string',
         ]);
 
         $nilaiWilayah = json_decode($request->nilai_storage, true);
-        if (!$nilaiWilayah) return back()->with('error', 'Data wizard tidak valid.');
+        if (!$nilaiWilayah) {
+            return back()->with('error', 'Data atribut tidak valid.');
+        }
 
-        // ==== BACA FILE GEO ====
+        /* ================== BACA GEOJSON / SHP ================= */
         $file = $request->file('geo');
         $geojsonData = [];
 
         if (str_ends_with(strtolower($file->getClientOriginalName()), '.zip')) {
-
-            // extract ZIP
             $zipPath = $file->store("shp_upload", "public");
             $extractDir = storage_path("app/public/shp_tmp/" . uniqid());
             mkdir($extractDir, 0777, true);
@@ -81,74 +106,75 @@ class WilayahController extends Controller
             $zip->extractTo($extractDir);
             $zip->close();
 
-            $shpFile = $this->findShp($extractDir);
-            if (!$shpFile) return back()->with('error','ZIP tidak berisi SHP lengkap');
-
-            $reader = new ShapefileReader($shpFile);
-
+            $reader = new ShapefileReader($this->findShp($extractDir));
             while ($rec = $reader->fetchRecord()) {
                 if (!$rec->isDeleted()) {
                     $geojsonData[] = json_decode($rec->getGeoJSON(), true);
                 }
             }
-
         } else {
             $gj = json_decode(file_get_contents($file->getRealPath()), true);
             $geojsonData = $gj['features'];
         }
 
-        // ==== SIMPAN PER POLYGON ====
-        $savedIDs = [];
-
+        /* ================== SIMPAN PER POLYGON ================= */
         foreach ($nilaiWilayah as $idx => $wil) {
 
-            $namaWilayah = $wil['nama'] ?? "Wilayah-$idx";
+            $namaWilayah = trim($wil['nama'] ?? "Wilayah-$idx");
             $atributList = $wil['atribut'] ?? [];
-            $rawFeature  = $geojsonData[$idx] ?? null;
+            $featureRaw  = $geojsonData[$idx] ?? null;
+            if (!$featureRaw) continue;
 
-            if (!$rawFeature) continue;
-
-            $feature = $this->normalizeFeature($rawFeature);
+            $feature = $this->normalizeFeature($featureRaw);
             $geom    = $feature['geometry'];
-
             $centroid = $this->centroid($geom);
 
-            $alt = AlternatifLahan::create([
-                'lokasi'        => $namaWilayah,
-                'geometry_type' => $geom['type'],
-                'lat'           => $centroid[1],
-                'lng'           => $centroid[0],
-            ]);
+            /* === UPDATE JIKA NAMA SAMA === */
+            $alt = AlternatifLahan::where('lokasi', $namaWilayah)->first();
 
-            $savedIDs[] = $alt->id;
+            if (!$alt) {
+                $alt = AlternatifLahan::create([
+                    'lokasi'        => $namaWilayah,
+                    'geometry_type' => $geom['type'],
+                    'lat'           => $centroid[1],
+                    'lng'           => $centroid[0],
+                ]);
+            } else {
+                NilaiAlternatif::where('alternatif_id', $alt->id)->delete();
+            }
 
-            // simpan file geojson polygon
+            /* === SIMPAN GEOJSON === */
             $path = "geojson/alt_{$alt->id}.geojson";
             Storage::disk('public')->put($path, json_encode([
                 "type" => "FeatureCollection",
-                "features" => [ $feature ]
+                "features" => [$feature]
             ]));
-
             $alt->update(['geojson_path' => $path]);
 
-            // simpan atribut dinamis
-            foreach ($atributList as $a){
-                if (!$a['nama']) continue;
+            /* === SIMPAN ATRIBUT === */
+            foreach ($atributList as $a) {
+                if (empty($a['nama']) || empty($a['nilai'])) continue;
+
+                $nilaiNumerik = $this->parseNilaiNumerik($a['nama'], $a['nilai']);
+                if ($nilaiNumerik === null) continue;
 
                 $kid = Kriteria::where('nama_kriteria', $a['nama'])->value('id');
+
                 NilaiAlternatif::create([
                     'alternatif_id' => $alt->id,
                     'kriteria_id'   => $kid,
-                    'atribut_nama'  => $a['nama'],
-                    'nilai'         => $a['nilai'],
+                    'nilai_input'   => $a['nilai'],  
+                    'nilai'         => $nilaiNumerik,
+                    'atribut_nama'  => $a['nama'],  
                 ]);
             }
         }
 
         return redirect()
             ->route('admin.wilayah.index')
-            ->with('success', count($savedIDs) . ' wilayah berhasil disimpan!');
+            ->with('success', 'Data wilayah & atribut berhasil disimpan.');
     }
+
 
     public function destroy($id)
 {
@@ -172,28 +198,23 @@ class WilayahController extends Controller
 
 
     private function findShp($dir)
-    {
-        $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir));
-        foreach ($it as $f){
-            if ($f->isFile() && str_ends_with(strtolower($f->getFilename()), '.shp')){
-                return $f->getPathname();
+        {
+            foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir)) as $f) {
+                if ($f->isFile() && str_ends_with(strtolower($f->getFilename()), '.shp')) {
+                    return $f->getPathname();
+                }
             }
+            return null;
         }
-        return null;
-    }
+
 
     private function normalizeFeature($item)
     {
-        if (isset($item['geometry'])) return $item;
-
-        if (isset($item['coordinates'])) {
-            return [
-                "type" => "Feature",
-                "geometry" => $item,
-                "properties" => []
-            ];
-        }
-        return null;
+        return isset($item['geometry']) ? $item : [
+            "type" => "Feature",
+            "geometry" => $item,
+            "properties" => []
+        ];
     }
 
     private function centroid($geom)
@@ -203,15 +224,16 @@ class WilayahController extends Controller
             $c = $g->centroid();
             return [$c->x(), $c->y()];
         } catch (\Exception $e) {
-
             $coords = ($geom['type'] === 'Polygon')
                 ? $geom['coordinates'][0]
                 : $geom['coordinates'][0][0];
 
-            $xs = array_column($coords, 0);
-            $ys = array_column($coords, 1);
-
-            return [ array_sum($xs)/count($xs), array_sum($ys)/count($ys) ];
+            return [
+                array_sum(array_column($coords, 0)) / count($coords),
+                array_sum(array_column($coords, 1)) / count($coords)
+            ];
         }
     }
+
+    
 }

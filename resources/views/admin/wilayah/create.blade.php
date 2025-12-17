@@ -102,7 +102,9 @@ $existingJson = $existingWilayah->map(function($w){
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 <script src="https://unpkg.com/shpjs/dist/shp.min.js"></script>
-
+<script>
+window.SUB_KRITERIA = @json($subKriteria);
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -264,20 +266,62 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         else {
             const a = nilaiWilayah[editingIndex].atribut[step.index];
+            const meta = ATRIBUT_META[a.nama] || { unit: "", parser: v => v };
+
             wizardBody.innerHTML = `
-                <label>Nama Atribut</label>
-                <input id="wiz_attr_name" class="form-control" value="${a.nama}">
+                <label class="fw-semibold">Nama Atribut</label>
+                <select id="wiz_attr_name" class="form-select">
+                    ${ SUB_KRITERIA.map(sk =>
+                        `<option value="${sk.nama_kriteria}" ${sk.nama_kriteria===a.nama ? 'selected':''}>
+                            ${sk.nama_kriteria}
+                        </option>`
+                    ).join('') }
+                </select>
 
-                <label class="mt-3">Nilai</label>
-                <input id="wiz_attr_value" class="form-control" value="${a.nilai}">
+                <label class="mt-3 fw-semibold">
+                    Nilai <span class="text-muted">(${meta.unit})</span>
+                </label>
 
-                <button id="removeAttr" class="btn btn-danger btn-sm mt-3">Hapus</button>
+                <input id="wiz_attr_value" class="form-control"
+                    value="${a.nilai ?? ''}"
+                    placeholder="Masukkan nilai dalam ${meta.unit}">
+
+                <!-- nilai numerik murni (hidden) -->
+                <input type="hidden" id="wiz_attr_numeric" value="">
+
+                <small class="text-muted d-block mt-1">
+                    Contoh: ${contohNilai(a.nama)}
+                </small>
+
+                <button id="removeAttr" class="btn btn-danger btn-sm mt-3">
+                    Hapus Atribut
+                </button>
             `;
 
-            setTimeout(()=>{
+            /* === EVENT GANTI ATRIBUT → UNIT BERUBAH === */
+            document.getElementById('wiz_attr_name').onchange = (e) => {
+                a.nama = e.target.value;
+                a.nilai = "";
+                renderWizardStep(); // refresh agar unit berubah
+            };
+
+            /* === EVENT INPUT NILAI → KONVERSI NUMERIK === */
+            document.getElementById('wiz_attr_value').oninput = (e) => {
+                const raw = e.target.value;
+                const meta = ATRIBUT_META[a.nama];
+
+                if (meta) {
+                    const numeric = meta.parser(raw);
+                    document.getElementById('wiz_attr_numeric').value =
+                        isNaN(numeric) ? "" : numeric;
+                }
+            };
+
+            setTimeout(() => {
                 document.getElementById("removeAttr").onclick = () => removeAttr(step.index);
-            },10);
+            }, 10);
         }
+
     }
 
     function saveWizard(){
@@ -333,6 +377,37 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
 });
+
+const ATRIBUT_META = {
+    "Suhu Rata-Rata": { unit: "°C", parser: v => parseFloat(v.replace(',', '.')) },
+    "Kelembaban": { unit: "%", parser: v => parseFloat(v.replace('%','').replace(',','.')) },
+    "Bulan Kering": { unit: "bulan", parser: v => parseFloat(v) },
+    "Curah Hujan": { unit: "mm", parser: v => parseFloat(v.replace('mm','').replace(',','.')) },
+    "Drainase": { unit: "skor (1–5)", parser: v => parseFloat(v) },
+    "Texture": { unit: "skor", parser: v => parseFloat(v) },
+    "Kedalaman Tanah": { unit: "cm", parser: v => parseFloat(v.replace('cm','').replace(',','.')) },
+    "KTK": { unit: "cmol(+)/kg", parser: v => parseFloat(v.replace(',','.')) },
+    "Kejenuhan Basa": { unit: "%", parser: v => parseFloat(v.replace('%','').replace(',','.')) },
+    "Ph Tanah": { unit: "pH", parser: v => parseFloat(v.replace(',','.')) },
+    "C-Organik": { unit: "%", parser: v => parseFloat(v.replace('%','').replace(',','.')) }
+};
+
+function contohNilai(nama) {
+    const contoh = {
+        "Suhu Rata-Rata": "25 °C",
+        "Kelembaban": "70 %",
+        "Bulan Kering": "3",
+        "Curah Hujan": "1500 mm",
+        "Drainase": "4",
+        "Texture": "3",
+        "Kedalaman Tanah": "40 cm",
+        "KTK": "18",
+        "Kejenuhan Basa": "60 %",
+        "Ph Tanah": "6.5",
+        "C-Organik": "1.7 %"
+    };
+    return contoh[nama] || "-";
+}
 </script>
 
 @endsection

@@ -30,9 +30,9 @@ class ScoringService
                     ->first()
                     ??
                     $alt->nilai->where('atribut_nama', $k->nama_kriteria)->first();
-
                 if ($nilaiAlt) {
                     $total += $nilaiAlt->nilai * $bobot;
+                
                 }
             }
 
