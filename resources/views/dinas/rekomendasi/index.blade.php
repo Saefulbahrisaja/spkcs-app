@@ -1,23 +1,38 @@
 @extends('layouts.app')
+
 @section('content')
-<h1 class="font-bold text-xl mb-4">Review Rekomendasi Kesesuaian Lahan</h1>
-<form method="POST">
-    @csrf
+<div class="container">
+    <h4>Rekomendasi Kebijakan Dinas</h4>
 
-    <label>Wilayah Prioritas</label>
-    <textarea name="wilayah_prioritas" class="w-full border p-2"></textarea>
+    <a href="{{ route('dinas.kebijakan.create') }}"
+       class="btn btn-primary mb-3">+ Tambah Kebijakan</a>
+ <a href="{{ route('dinas.evaluasi.pdf') }}"
+       class="btn btn-danger mb-3">
+        Download PDF Laporan Resmi Semua Wilayah
+    </a>
 
-    <label class="mt-2 block">Daftar Intervensi</label>
-    <textarea name="daftar_intervensi" class="w-full border p-2"></textarea>
-
-    <label class="mt-2 block">Catatan</label>
-    <textarea name="catatan" class="w-full border p-2"></textarea>
-
-    <button class="bg-blue-600 text-white px-4 py-2 mt-3 rounded">
-        Simpan Rekomendasi
-    </button>
-</form>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Tanggal</th>
+                <th>Wilayah Prioritas</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($data as $d)
+            <tr>
+                <td>{{ $d->tanggal }}</td>
+                <td>{{ $d->wilayah_prioritas }}</td>
+                <td>
+                    <span class="badge 
+                        {{ $d->status == 'ditetapkan' ? 'bg-success' : 'bg-secondary' }}">
+                        {{ ucfirst($d->status) }}
+                    </span>
+                </td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+</div>
 @endsection
-
-
-

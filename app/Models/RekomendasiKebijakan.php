@@ -8,9 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class RekomendasiKebijakan extends Model
 {
     protected $fillable = [
-        'laporan_id','tanggal','wilayah_prioritas','daftar_intervensi','catatan','status'
+        'laporan_id',
+        'tanggal',
+        'wilayah_prioritas',
+        'daftar_intervensi',
+        'catatan',
+        'status'
     ];
-
     protected $casts = [
         'wilayah_prioritas' => 'array',
     ];

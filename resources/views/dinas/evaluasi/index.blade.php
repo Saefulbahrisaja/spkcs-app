@@ -5,11 +5,7 @@
 
     <h4 class="mb-4">Evaluasi Kesesuaian Lahan (Dinas)</h4>
 
-    <a href="{{ route('dinas.evaluasi.pdf') }}"
-       class="btn btn-danger mb-3">
-        Download PDF Laporan Resmi Semua Wilayah
-    </a>
-
+   
     <table class="table table-bordered table-striped">
         <thead class="table-light">
             <tr>

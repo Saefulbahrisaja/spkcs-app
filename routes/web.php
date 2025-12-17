@@ -29,6 +29,8 @@ use App\Http\Controllers\GISController;
 // DINAS
 use App\Http\Controllers\dinas\EvaluasiController;
 use App\Http\Controllers\dinas\RekomendasiController; 
+use App\Http\Controllers\dinas\RekomendasiKebijakanController;
+use App\Http\Controllers\dinas\DashboardDinasController;
 
 // DASHBOARD
 use App\Http\Controllers\DashboardController;
@@ -104,17 +106,20 @@ Route::middleware(['auth', 'role:dinas'])
     ->prefix('dinas')
     ->name('dinas.')
     ->group(function() {
-    Route::get('/', fn() => view('dinas.dashboard'))->name('dashboard');
+    //Route::get('/', fn() => view('dinas.dashboard'))->name('dashboard');
+    Route::get('/', [DashboardDinasController::class,'index'])->name('dashboard');
+    //Route::get('/', fn() => view('dinas.dashboard'))->name('dashboard');
 
     Route::get('evaluasi', [EvaluasiController::class, 'index'])->name('evaluasi.index');
     Route::get('/dinas/evaluasi', [EvaluasiController::class, 'index'])->name('evaluasi');
     Route::get('evaluasi/{id}', [EvaluasiController::class, 'show'])->name('evaluasi.show');
     Route::post('evaluasi/{id}/validasi', [EvaluasiController::class, 'validasi'])->name('evaluasi.validasi');
     Route::get('/dinas/evaluasi/pdf', [EvaluasiController::class, 'generate'])->name('evaluasi.pdf');
-    Route::get(
-    '/dinas/evaluasi/{id}/pdf',
-    [EvaluasiController::class, 'generatePerWilayah']
-)->name('evaluasi.wilayah.pdf');
+    Route::get('/dinas/evaluasi/{id}/pdf',[EvaluasiController::class, 'generatePerWilayah'])->name('evaluasi.wilayah.pdf');
+
+     Route::get('kebijakan', [RekomendasiKebijakanController::class,'index'])->name('kebijakan.index');
+    Route::get('kebijakan/create', [RekomendasiKebijakanController::class,'create'])->name('kebijakan.create');
+    Route::post('kebijakan', [RekomendasiKebijakanController::class,'store'])->name('kebijakan.store');
 });
 
 Route::middleware(['auth', 'role:penyuluh'])

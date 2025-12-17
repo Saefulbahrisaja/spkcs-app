@@ -227,7 +227,6 @@ class WilayahController extends Controller
             $coords = ($geom['type'] === 'Polygon')
                 ? $geom['coordinates'][0]
                 : $geom['coordinates'][0][0];
-
             return [
                 array_sum(array_column($coords, 0)) / count($coords),
                 array_sum(array_column($coords, 1)) / count($coords)

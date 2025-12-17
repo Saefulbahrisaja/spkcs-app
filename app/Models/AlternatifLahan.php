@@ -54,6 +54,11 @@ public function klasifikasi()
         return $this->hasMany(NilaiAlternatif::class, 'alternatif_id')
                     ->whereNull('kriteria_id'); 
     }
+
+    public function rekomendasiKebijakan()
+{
+    return $this->hasMany(RekomendasiKebijakan::class, 'laporan_id');
+}
     
 }
 

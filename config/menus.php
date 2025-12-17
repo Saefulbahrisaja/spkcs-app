@@ -20,7 +20,7 @@ return [
         'menus' => [
             ['label' => 'Dashboard', 'route' => 'dinas.dashboard'],
             ['label' => 'Validasi Evaluasi', 'route' => 'dinas.evaluasi.index'],
-            //['label' => 'Input Rekomendasi', 'route' => 'dinas.rekomendasi.index'],
+            ['label' => 'Input Rekomendasi', 'route' => 'dinas.kebijakan.index'],
             //['label' => 'Hasil', 'route' => 'dinas.rekomendasi.index'],
         ]
     ],

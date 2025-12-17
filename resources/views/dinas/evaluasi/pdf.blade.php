@@ -20,6 +20,7 @@ th { background: #f0f0f0; }
 Dinas Pertanian Provinsi Banten<br>
 Tanggal: {{ $tanggal }}
 </p>
+<hr>
 
 @foreach($data as $d)
 <div class="section">
@@ -72,7 +73,37 @@ Tanggal: {{ $tanggal }}
 </div>
 @endforeach
 
+@if($kebijakan)
+<hr>
 
+<h3>Rekomendasi Kebijakan Dinas Pertanian</h3>
+
+<table>
+    <tr>
+        <th width="30%">Tanggal Penetapan</th>
+        <td>{{ \Carbon\Carbon::parse($kebijakan->tanggal)->format('d F Y') }}</td>
+    </tr>
+    <tr>
+        <th>Wilayah Prioritas</th>
+        <td>{{ $kebijakan->wilayah_prioritas }}</td>
+    </tr>
+    <tr>
+        <th>Daftar Intervensi</th>
+        <td>{!! nl2br(e($kebijakan->daftar_intervensi)) !!}</td>
+    </tr>
+    <tr>
+        <th>Catatan</th>
+        <td>{{ $kebijakan->catatan ?? '—' }}</td>
+    </tr>
+    <tr>
+        <th>Status</th>
+        <td><strong>{{ strtoupper($kebijakan->status) }}</strong></td>
+    </tr>
+</table>
+@endif
+@if(!$kebijakan)
+<p><em>Rekomendasi kebijakan belum ditetapkan.</em></p>
+@endif
 <div class="signature">
     Pandeglang, {{ $tanggal }}<br><br><br>
     <strong>Kepala Dinas Pertanian</strong><br>

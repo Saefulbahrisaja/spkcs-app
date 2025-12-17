@@ -1,23 +1,55 @@
 @extends('layouts.app')
+
 @section('content')
+<div class="container">
+    <h4>Input Rekomendasi Kebijakan</h4>
 
-<h1 class="text-xl font-bold mb-4">Input Rekomendasi Kebijakan</h1>
+    <form method="POST" action="{{ route('dinas.kebijakan.store') }}">
+        @csrf
 
-<form method="POST">
-    @csrf
+        <div class="mb-3">
+            <label>Tanggal</label>
+            <input type="date" name="tanggal" class="form-control" required>
+        </div>
 
-    <label>Wilayah Prioritas</label>
-    <textarea name="wilayah_prioritas" class="w-full border p-2"></textarea>
+        <div class="mb-3">
+    <label class="form-label fw-bold">Wilayah Prioritas </label>
 
-    <label class="mt-2 block">Daftar Intervensi</label>
-    <textarea name="daftar_intervensi" class="w-full border p-2"></textarea>
+        <textarea name="wilayah_prioritas"
+                    class="form-control"
+                    rows="8"
+                    
+                    style="background:#f8f9fa">{{ $wilayahPrioritas }}</textarea>
 
-    <label class="mt-2 block">Catatan</label>
-    <textarea name="catatan" class="w-full border p-2"></textarea>
+            <small class="text-muted">
+                Data diambil otomatis dari hasil evaluasi .
+                Salin atau edit jika diperlukan.
+            </small>
+        </div>
 
-    <button class="bg-blue-600 text-white px-4 py-2 mt-3 rounded">
-        Simpan Rekomendasi
-    </button>
-</form>
 
+        <div class="mb-3">
+            <label>Daftar Intervensi</label>
+            <textarea name="daftar_intervensi" class="form-control" rows="4"
+            placeholder="• Rehabilitasi irigasi&#10;• Bantuan pupuk organik&#10;• Penguatan kelompok tani"></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label>Catatan</label>
+            <textarea name="catatan" class="form-control" rows="3"></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label>Status</label>
+            <select name="status" class="form-select">
+                <option value="draft">Draft</option>
+                <option value="ditetapkan">Ditetapkan</option>
+                <option value="ditunda">Ditunda</option>
+            </select>
+        </div>
+
+        <button class="btn btn-success">Simpan</button>
+        <a href="{{ route('dinas.kebijakan.index') }}" class="btn btn-secondary">Kembali</a>
+    </form>
+</div>
 @endsection

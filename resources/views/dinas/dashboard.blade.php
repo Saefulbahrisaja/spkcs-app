@@ -67,6 +67,61 @@
 <!-- ======================= RINGKASAN LUAS ======================= -->
 <div class="row mb-4" id="ringkasanLuasContainer">
 </div>
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body">
+                <h6 class="text-success">S1 – Sangat Sesuai</h6>
+                <h4>{{ $ringkasan['S1'] ?? 0 }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body">
+                <h6 class="text-warning">S2 – Cukup Sesuai</h6>
+                <h4>{{ $ringkasan['S2'] ?? 0 }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-orange">
+            <div class="card-body">
+                <h6 class="text-orange">S3 – Marginal</h6>
+                <h4>{{ $ringkasan['S3'] ?? 0 }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card border-danger">
+            <div class="card-body">
+                <h6 class="text-danger">N – Tidak Sesuai</h6>
+                <h4>{{ $ringkasan['N'] ?? 0 }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card mb-4">
+    <div class="card-header fw-bold">
+        Ringkasan Wilayah Prioritas (S1–S3)
+    </div>
+    <div class="card-body">
+        <ul class="mb-0">
+            @foreach($wilayahPrioritas as $w)
+                <li>
+                    {{ $w->lokasi }}
+                    <span class="badge bg-success">
+                        {{ $w->klasifikasi->kelas_kesesuaian }}
+                    </span>
+                </li>
+            @endforeach
+        </ul>
+    </div>
+</div>
+
 <!-- ======================= MAP SECTION ======================= -->
 <div class="card shadow-sm mb-4">
     <div class="card-header">

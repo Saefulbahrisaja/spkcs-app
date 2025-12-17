@@ -64,13 +64,39 @@ class EvaluasiController extends Controller
             'klasifikasi'
         ])->get();
 
+        // ===== SUMMARY OTOMATIS =====
+        $summary = [
+            'S1' => [],
+            'S2' => [],
+            'S3' => [],
+        ];
+
+        foreach ($data as $d) {
+            if (in_array($d->kelas_kesesuaian, ['S1','S2','S3'])) {
+                $summary[$d->kelas_kesesuaian][] = $d->lokasi;
+            }
+        }
+
+        // ubah ke string siap tampil
+        $summaryText = [
+            'S1' => implode(', ', $summary['S1']),
+            'S2' => implode(', ', $summary['S2']),
+            'S3' => implode(', ', $summary['S3']),
+        ];
+
+        // ===== AMBIL REKOMENDASI KEBIJAKAN TERBARU =====
+        $kebijakan = \App\Models\RekomendasiKebijakan::orderByDesc('tanggal')->first();
+
         $pdf = Pdf::loadView('dinas.evaluasi.pdf', [
-            'data' => $data,
-            'tanggal' => now()->translatedFormat('d F Y')
+            'data'        => $data,
+            'tanggal'     => now()->format('d F Y'),
+            'summary'     => $summaryText,
+            'kebijakan'   => $kebijakan
         ])->setPaper('A4', 'portrait');
 
-        return $pdf->download('Laporan_Evaluasi_Kesesuaian_Lahan.pdf');
+        return $pdf->download('Laporan_Evaluasi_Kesesuaian_Lahan_Resmi.pdf');
     }
+
 
     public function generatePerWilayah($id)
     {
